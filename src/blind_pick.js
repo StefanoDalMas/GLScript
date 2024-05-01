@@ -6,8 +6,10 @@
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import { remote, local } from "../config/config.js"
 
+let n_parcels = 0
+
 const client = local
-// client = remote
+// const client = remote
 
 function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
     const dx = Math.abs(Math.round(x1) - Math.round(x2))
@@ -38,6 +40,12 @@ client.onConfig((param) => {
     // console.log(param);
 })
 
+let delivery_db = []
+client.onTile((x, y, delivery) => {
+    if (delivery) {
+        delivery_db.push([x, y])
+    }
+})
 
 
 /**
@@ -76,6 +84,7 @@ client.onParcelsSensing(parcels => {
      * Best option is selected
      */
     if (best_option)
+        // console.log("best option: ", best_option)
         myAgent.push(best_option)
 
 })
@@ -83,7 +92,7 @@ client.onParcelsSensing(parcels => {
 // client.onYou( agentLoop )
 
 
-
+let x = 0;
 /**
  * Intention revision loop
  */
@@ -96,25 +105,51 @@ class IntentionRevision {
 
     async loop() {
         while (true) {
-            
+
             // Consumes intention_queue if not empty
             if (this.intention_queue.length > 0) {
-                console.log("LENGTH            ", this.intention_queue.length)
-                console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
+                // console.log("LENGTH            ", this.intention_queue.length)
+                // console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
+                // console.log('database:', delivery_db)
+
+                if (n_parcels > 5) {
+
+                    /**
+                     * Options filtering
+                     */
+                    let best_option;
+                    let nearest = Number.MAX_VALUE;
+                    for (const option of delivery_db) {
+                        let [x, y] = option;
+                        let current_d = distance({ x, y }, me)
+                        console.log("option is: ", option, " and distance is: ", current_d)
+                        if (current_d < nearest) {
+                            best_option = option
+                            nearest = current_d
+                        }
+                    }
+
+                    console.log("putting down...")
+                    myAgent.push(['go_put_down', best_option[0], best_option[1]])
+                }
 
                 // Current intention
                 const intention = this.intention_queue[0];
 
                 // Is queued intention still valid? Do I still want to achieve it?
-                // TODO this hard-coded implementation is an example
-                let id = intention.predicate[3]
-                let p = parcels.get(id)
-
-                if (p && p.carriedBy) {
-                    console.log('Skipping intention because no more valid', intention.predicate)
-                    continue;
+                if(intention[0] == 'go_pick_up') {
+                    let id = intention.predicate[3]
+                    let p = parcels.get(id)
+    
+                    if (p && p.carriedBy) {
+                        console.log('Skipping intention because no more valid', intention.predicate)
+                        continue;
+                    }
+    
+                } else if (intention[0] == 'go_put_down') {
+                    console.log('Skipping intention for fun', intention.predicate)
+                    continue
                 }
-
                 // Start achieving intention
                 await intention.achieve()
                     // Catch eventual error and continue
@@ -124,7 +159,15 @@ class IntentionRevision {
 
                 // Remove from the queue
                 this.intention_queue.shift();
+
+                x = 1;
+            } else {
+                if(x > 1){
+                    console.log("TEST")
+                    myAgent.push(['random_move']);
+                }
             }
+                
             // Postpone next iteration at setImmediate
             await new Promise(res => setImmediate(res));
         }
@@ -142,13 +185,34 @@ class IntentionRevisionQueue extends IntentionRevision {
 
     async push(predicate) {
 
-        // Check if already queued
-        if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
-            return; // intention is already queued
+        if (predicate){
+            // console.log("predicate is: ", predicate)
+            // Check if already queued
+            if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
+                return; // intention is already queued
+    
+            console.log('IntentionRevisionReplace.push', predicate);
+            const intention = new Intention(this, predicate);
+            this.intention_queue.push(intention);
+        }
+    }
 
-        console.log('IntentionRevisionReplace.push', predicate);
-        const intention = new Intention(this, predicate);
-        this.intention_queue.push(intention);
+}
+
+class IntentionRevisionStack extends IntentionRevision {
+
+    async push(predicate) {
+
+        if (predicate) {
+            console.log("predicate is: ", predicate)
+            // Check if already queued
+            if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
+                return; // intention is already queued
+
+            console.log('IntentionRevisionReplace.push', predicate);
+            const intention = new Intention(this, predicate);
+            this.intention_queue.unshift(intention);
+        }
     }
 
 }
@@ -178,11 +242,12 @@ class IntentionRevisionReplace extends IntentionRevision {
 class IntentionRevisionRevise extends IntentionRevision {
 
     async push(predicate) {
-        console.log('Revising intention queue. Received', ...predicate);
-        // TODO
-        // - order intentions based on utility function (reward - cost) (for example, parcel score minus distance)
-        // - eventually stop current one
-        // - evaluate validity of intention
+        //     console.log('Revising intention queue. Received', ...predicate);
+        //     // TODO
+        //     // - order intentions based on utility function (reward - cost) (for example, parcel score minus distance)
+        //     // - eventually stop current one
+        //     // - evaluate validity of intention
+        // }
     }
 
 }
@@ -192,6 +257,7 @@ class IntentionRevisionRevise extends IntentionRevision {
  */
 
 const myAgent = new IntentionRevisionQueue();
+// const myAgent = new IntentionRevisionStack();
 // const myAgent = new IntentionRevisionReplace();
 // const myAgent = new IntentionRevisionRevise();
 myAgent.loop();
@@ -346,6 +412,26 @@ class GoPickUp extends Plan {
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await client.pickup()
+        n_parcels += 1
+        if (this.stopped) throw ['stopped']; // if stopped then quit
+        return true;
+    }
+
+}
+
+class GoPutDown extends Plan {
+
+    static isApplicableTo(go_put_down, x, y) {
+        return go_put_down == 'go_put_down';
+    }
+
+    async execute(go_put_down, x, y, id) {
+        if (this.stopped) throw ['stopped']; // if stopped then quit
+        await this.subIntention(['go_to', x, y]);
+        if (this.stopped) throw ['stopped']; // if stopped then quit
+        await client.putdown()
+        n_parcels = 0
+
         if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
     }
@@ -409,6 +495,24 @@ class BlindMove extends Plan {
     }
 }
 
+class RandomMove extends Plan {
+
+    static isApplicableTo(random_move) {
+        return random_move == 'random_move';
+    }
+
+    async execute(random_move) {
+        if (this.stopped) throw ['stopped']; // if stopped then quit
+        let random_x = Math.random() < 0.5 ? -1 : 1;
+        let random_y = Math.random() < 0.5 ? -1 : 1;
+        await this.subIntention(['go_to', x + random_x, y + random_y]);
+        if (this.stopped) throw ['stopped']; // if stopped then quit
+        return true;
+    }
+
+}
 // plan classes are added to plan library 
 planLibrary.push(GoPickUp)
+planLibrary.push(GoPutDown)
 planLibrary.push(BlindMove)
+planLibrary.push(RandomMove)
