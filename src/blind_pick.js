@@ -35,11 +35,14 @@ client.onYou(({ id, name, x, y, score }) => {
     me.score = score
 })
 const parcels = new Map();
+let parcel_locations = [];
 client.onParcelsSensing(async (perceived_parcels) => {
     for (const p of perceived_parcels) {
         parcels.set(p.id, p)
+        parcel_locations.push([p.x, p.y])
     }
 })
+
 // client.onConfig((param) => {
 //     console.log(param);
 // })
@@ -159,7 +162,7 @@ class IntentionRevision {
                 // console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
                 // console.log('database:', delivery_db)
 
-                if (n_parcels > 5) {
+                if (n_parcels > 3) {
 
                     /**
                      * Options filtering
@@ -457,6 +460,7 @@ class GoPickUp extends Plan {
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await client.pickup()
+        parcel_locations = parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
         n_parcels += 1;
         if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
@@ -525,6 +529,12 @@ class BlindMove extends Plan {
             if (delivery_tiles.some(arr => arr[0] === me.x && arr[1] === me.y) && n_parcels > 0) {
                 await client.putdown()
                 n_parcels = 0
+            }
+            // if I pass on a parcel, I pick it up and remove it from the list
+            if (parcel_locations.some(arr => arr[0] === me.x && arr[1] === me.y)){
+                await client.pickup()
+                parcel_locations = parcel_locations.filter(item => !(item[0] !== me.x && item[1] !== me.y))
+                n_parcels += 1;
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
             index++;
