@@ -41,9 +41,9 @@ client.onParcelsSensing(async (perceived_parcels) => {
         parcels.set(p.id, p)
     }
 })
-client.onConfig((param) => {
-    console.log(param);
-})
+// client.onConfig((param) => {
+//     console.log(param);
+// })
 
 let delivery_tiles = [] // contains delivery tiles
 // init map to 0
@@ -102,13 +102,15 @@ client.onParcelsSensing(parcels => {
     if (best_option)
         // console.log("best option: ", best_option)
         myAgent.push(best_option)
+    else
+        myAgent.push(['random_move'])
 
 })
 // client.onAgentsSensing( agentLoop )
 // client.onYou( agentLoop )
 
 
-let x = 0;
+let queue_initialized = false;
 /**
  * Intention revision loop
  */
@@ -181,6 +183,7 @@ class IntentionRevision {
 
                 // }
                 // Start achieving intention
+                queue_initialized = true;
                 await intention.achieve()
                     // Catch eventual error and continue
                     .catch(error => {
@@ -190,13 +193,7 @@ class IntentionRevision {
                 // Remove from the queue
                 this.intention_queue.shift();
 
-                x = 1;
-            } else {
-                if (x > 1) {
-                    console.log("TEST")
-                    myAgent.push(['random_move']);
-                }
-            }
+            } 
 
             // Postpone next iteration at setImmediate
             await new Promise(res => setImmediate(res));
@@ -508,7 +505,6 @@ class BlindMove extends Plan {
             }
             //check if [9,3] is in delivery_tiles
             if (delivery_tiles.some(arr => arr[0] === me.x && arr[1] === me.y) && n_parcels > 0) {
-                console.log("Delivering...")
                 await client.putdown()
                 n_parcels = 0
             }
@@ -568,9 +564,23 @@ class RandomMove extends Plan {
 
     async execute(random_move) {
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        let random_x = Math.random() < 0.5 ? -1 : 1;
-        let random_y = Math.random() < 0.5 ? -1 : 1;
-        await this.subIntention(['go_to', x + random_x, y + random_y]);
+        //from my position, choose an adjacent tile in deliveroo_map
+        let possible_moves = []
+        //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
+        if (deliveroo_map[me.x + 1][me.y] == 1) {
+            possible_moves.push({ x: me.x + 1, y: me.y })
+        }
+        if (deliveroo_map[me.x - 1][me.y] == 1) {
+            possible_moves.push({ x: me.x - 1, y: me.y })
+        }
+        if (deliveroo_map[me.x][me.y + 1] == 1) {
+            possible_moves.push({ x: me.x, y: me.y + 1 })
+        }
+        if (deliveroo_map[me.x][me.y - 1] == 1) {
+            possible_moves.push({ x: me.x, y: me.y - 1 })
+        }
+        let new_tile = possible_moves[Math.floor(Math.random() * possible_moves.length)]
+        await this.subIntention(['go_to', new_tile.x, new_tile.y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
     }
