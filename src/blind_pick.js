@@ -1,7 +1,11 @@
-// //TODO:
-// // Belief revision : sensing parcels and agents, update accordingly
-// // Intention revision : decide what to do / plan the move and see if it is applicable
-// // Execution : execute the plan if possible
+//TODO:
+// random move
+// intention revision (quando voglio fare una cosa, devo priva(o durante) verificare che si possa ancora fare)
+    // - tipo se sto andando a prendere un pacco che ricordo in posizione x, y appena la tile in pos x, y è visibile controllo se
+    // il pacchetto è ancora presente e se ha valore maggiore di un tot
+// routing: fare if che controlla se il graph è già stato inizializzato o meno. Se no costruirlo con deliveroo_map
+// 
+
 
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import { remote, local } from "../config/config.js"
@@ -37,16 +41,25 @@ client.onParcelsSensing(async (perceived_parcels) => {
     }
 })
 client.onConfig((param) => {
-    // console.log(param);
+    console.log(param);
 })
 
-let delivery_db = []
+let delivery_tiles = [] // contains delivery tiles
+// init map to 0
+let deliveroo_map = [];
+for (let i = 0; i < 50; i++) {
+    deliveroo_map[i] = [];
+    for (let j = 0; j < 50; j++) {
+        deliveroo_map[i][j] = 0;
+    }
+}
+
 client.onTile((x, y, delivery) => {
     if (delivery) {
-        delivery_db.push([x, y])
+        delivery_tiles.push([x, y]);
     }
+    deliveroo_map[x][y] = 1;
 })
-
 
 /**
  * Options generation and filtering function
@@ -58,14 +71,15 @@ client.onParcelsSensing(parcels => {
     /**
      * Options generation
      */
-    const options = []
+    // belief set
+    const options = [] 
     for (const parcel of parcels.values())
         if (!parcel.carriedBy)
             options.push(['go_pick_up', parcel.x, parcel.y, parcel.id]);
     // myAgent.push( [ 'go_pick_up', parcel.x, parcel.y, parcel.id ] )
 
     /**
-     * Options filtering
+     * Options filtering (belief filtering)
      */
     let best_option;
     let nearest = Number.MAX_VALUE;
@@ -108,7 +122,18 @@ class IntentionRevision {
 
             // Consumes intention_queue if not empty
             if (this.intention_queue.length > 0) {
-                // console.log("LENGTH            ", this.intention_queue.length)
+                console.log("LENGTH: ", this.intention_queue.length)
+                var result = "";
+
+                for (var i = 0; i < this.intention_queue.length; i++) {
+                    result += this.intention_queue[i].predicate;
+                    if (i !== this.intention_queue.length - 1) {
+                        result += " "; // Aggiungi uno spazio tra gli elementi, tranne l'ultimo
+                    }
+                }
+
+                console.log(result);
+                
                 // console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
                 // console.log('database:', delivery_db)
 
@@ -119,17 +144,17 @@ class IntentionRevision {
                      */
                     let best_option;
                     let nearest = Number.MAX_VALUE;
-                    for (const option of delivery_db) {
+                    for (const option of delivery_tiles) {
                         let [x, y] = option;
                         let current_d = distance({ x, y }, me)
-                        console.log("option is: ", option, " and distance is: ", current_d)
+                        // console.log("option is: ", option, " and distance is: ", current_d)
                         if (current_d < nearest) {
                             best_option = option
                             nearest = current_d
                         }
                     }
 
-                    console.log("putting down...")
+                    // console.log("putting down...")
                     myAgent.push(['go_put_down', best_option[0], best_option[1]])
                 }
 
@@ -142,14 +167,17 @@ class IntentionRevision {
                     let p = parcels.get(id)
     
                     if (p && p.carriedBy) {
-                        console.log('Skipping intention because no more valid', intention.predicate)
+                        // console.log('Skipping intention because no more valid', intention.predicate)
                         continue;
                     }
     
                 } else if (intention[0] == 'go_put_down') {
-                    console.log('Skipping intention for fun', intention.predicate)
+                    // console.log('Skipping intention for fun', intention.predicate)
                     continue
-                }
+                } 
+                // else if () {
+
+                // }
                 // Start achieving intention
                 await intention.achieve()
                     // Catch eventual error and continue
@@ -176,7 +204,7 @@ class IntentionRevision {
     // async push ( predicate ) { }
 
     log(...args) {
-        console.log(...args)
+        // console.log(...args)
     }
 
 }
@@ -191,7 +219,7 @@ class IntentionRevisionQueue extends IntentionRevision {
             if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
                 return; // intention is already queued
     
-            console.log('IntentionRevisionReplace.push', predicate);
+            // console.log('IntentionRevisionReplace.push', predicate);
             const intention = new Intention(this, predicate);
             this.intention_queue.push(intention);
         }
@@ -204,12 +232,12 @@ class IntentionRevisionStack extends IntentionRevision {
     async push(predicate) {
 
         if (predicate) {
-            console.log("predicate is: ", predicate)
+            // console.log("predicate is: ", predicate)
             // Check if already queued
             if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
                 return; // intention is already queued
 
-            console.log('IntentionRevisionReplace.push', predicate);
+            // console.log('IntentionRevisionReplace.push', predicate);
             const intention = new Intention(this, predicate);
             this.intention_queue.unshift(intention);
         }
@@ -227,7 +255,7 @@ class IntentionRevisionReplace extends IntentionRevision {
             return; // intention is already being achieved
         }
 
-        console.log('IntentionRevisionReplace.push', predicate);
+        // console.log('IntentionRevisionReplace.push', predicate);
         const intention = new Intention(this, predicate);
         this.intention_queue.push(intention);
 
@@ -256,9 +284,9 @@ class IntentionRevisionRevise extends IntentionRevision {
  * Start intention revision loop
  */
 
-const myAgent = new IntentionRevisionQueue();
+// const myAgent = new IntentionRevisionQueue();
 // const myAgent = new IntentionRevisionStack();
-// const myAgent = new IntentionRevisionReplace();
+const myAgent = new IntentionRevisionReplace();
 // const myAgent = new IntentionRevisionRevise();
 myAgent.loop();
 
@@ -330,15 +358,15 @@ class Intention {
             if (planClass.isApplicableTo(...this.predicate)) {
                 // plan is instantiated
                 this.#current_plan = new planClass(this.parent);
-                this.log('achieving intention', ...this.predicate, 'with plan', planClass.name);
+                // this.log('achieving intention', ...this.predicate, 'with plan', planClass.name);
                 // and plan is executed and result returned
                 try {
                     const plan_res = await this.#current_plan.execute(...this.predicate);
-                    this.log('succesful intention', ...this.predicate, 'with plan', planClass.name, 'with result:', plan_res);
+                    // this.log('succesful intention', ...this.predicate, 'with plan', planClass.name, 'with result:', plan_res);
                     return plan_res
                     // or errors are caught so to continue with next plan
                 } catch (error) {
-                    this.log('failed intention', ...this.predicate, 'with plan', planClass.name, 'with error:', ...error);
+                    // this.log('failed intention', ...this.predicate, 'with plan', planClass.name, 'with error:', ...error);
                 }
             }
 
@@ -412,7 +440,7 @@ class GoPickUp extends Plan {
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await client.pickup()
-        n_parcels += 1
+        n_parcels += 1;
         if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
     }
