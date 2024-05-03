@@ -1,14 +1,15 @@
 //TODO:
 // random move
 // intention revision (quando voglio fare una cosa, devo priva(o durante) verificare che si possa ancora fare)
-    // - tipo se sto andando a prendere un pacco che ricordo in posizione x, y appena la tile in pos x, y è visibile controllo se
-    // il pacchetto è ancora presente e se ha valore maggiore di un tot
+// - tipo se sto andando a prendere un pacco che ricordo in posizione x, y appena la tile in pos x, y è visibile controllo se
+// il pacchetto è ancora presente e se ha valore maggiore di un tot
 // routing: fare if che controlla se il graph è già stato inizializzato o meno. Se no costruirlo con deliveroo_map
 // 
 
 
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import { remote, local } from "../config/config.js"
+import { astar, Graph } from "./astar.js"
 
 let n_parcels = 0
 
@@ -46,6 +47,7 @@ client.onConfig((param) => {
 
 let delivery_tiles = [] // contains delivery tiles
 // init map to 0
+let deliveroo_graph;
 let deliveroo_map = [];
 for (let i = 0; i < 50; i++) {
     deliveroo_map[i] = [];
@@ -72,7 +74,7 @@ client.onParcelsSensing(parcels => {
      * Options generation
      */
     // belief set
-    const options = [] 
+    const options = []
     for (const parcel of parcels.values())
         if (!parcel.carriedBy)
             options.push(['go_pick_up', parcel.x, parcel.y, parcel.id]);
@@ -133,7 +135,7 @@ class IntentionRevision {
                 }
 
                 console.log(result);
-                
+
                 // console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
                 // console.log('database:', delivery_db)
 
@@ -162,19 +164,19 @@ class IntentionRevision {
                 const intention = this.intention_queue[0];
 
                 // Is queued intention still valid? Do I still want to achieve it?
-                if(intention[0] == 'go_pick_up') {
+                if (intention[0] == 'go_pick_up') {
                     let id = intention.predicate[3]
                     let p = parcels.get(id)
-    
+
                     if (p && p.carriedBy) {
                         // console.log('Skipping intention because no more valid', intention.predicate)
                         continue;
                     }
-    
+
                 } else if (intention[0] == 'go_put_down') {
                     // console.log('Skipping intention for fun', intention.predicate)
                     continue
-                } 
+                }
                 // else if () {
 
                 // }
@@ -190,12 +192,12 @@ class IntentionRevision {
 
                 x = 1;
             } else {
-                if(x > 1){
+                if (x > 1) {
                     console.log("TEST")
                     myAgent.push(['random_move']);
                 }
             }
-                
+
             // Postpone next iteration at setImmediate
             await new Promise(res => setImmediate(res));
         }
@@ -213,12 +215,12 @@ class IntentionRevisionQueue extends IntentionRevision {
 
     async push(predicate) {
 
-        if (predicate){
+        if (predicate) {
             // console.log("predicate is: ", predicate)
             // Check if already queued
             if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
                 return; // intention is already queued
-    
+
             // console.log('IntentionRevisionReplace.push', predicate);
             const intention = new Intention(this, predicate);
             this.intention_queue.push(intention);
@@ -474,52 +476,87 @@ class BlindMove extends Plan {
 
     async execute(go_to, x, y) {
 
+        if (deliveroo_graph == undefined) {
+            deliveroo_graph = new Graph(deliveroo_map);
+        }
+
+        let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me.x][me.y], deliveroo_graph.grid[x][y]);
+        let index = 0;
+        //follow path until destination is reached
+
         while (me.x != x || me.y != y) {
 
             if (this.stopped) throw ['stopped']; // if stopped then quit
-
-            let status_x = false;
-            let status_y = false;
-
-            // this.log('me', me, 'xy', x, y);
-
-            if (x > me.x)
-                status_x = await client.move('right')
-            // status_x = await this.subIntention( 'go_to', {x: me.x+1, y: me.y} );
-            else if (x < me.x)
-                status_x = await client.move('left')
-            // status_x = await this.subIntention( 'go_to', {x: me.x-1, y: me.y} );
-
-            if (status_x) {
-                me.x = status_x.x;
-                me.y = status_x.y;
+            let next_tile = path[index];
+            //evaluate if it is a up, down, left or right move
+            if (next_tile.x == me.x + 1 && next_tile.y == me.y) {
+                await client.move('right')
+                me.x = next_tile.x;
+                me.y = next_tile.y;
+            } else if (next_tile.x == me.x - 1 && next_tile.y == me.y) {
+                await client.move('left')
+                me.x = next_tile.x;
+                me.y = next_tile.y;
+            } else if (next_tile.x == me.x && next_tile.y == me.y + 1) {
+                await client.move('up')
+                me.x = next_tile.x;
+                me.y = next_tile.y;
+            } else if (next_tile.x == me.x && next_tile.y == me.y - 1) {
+                await client.move('down')
+                me.x = next_tile.x;
+                me.y = next_tile.y;
             }
-
+            //check if [9,3] is in delivery_tiles
+            if (delivery_tiles.some(arr => arr[0] === me.x && arr[1] === me.y) && n_parcels > 0) {
+                console.log("Delivering...")
+                await client.putdown()
+                n_parcels = 0
+            }
             if (this.stopped) throw ['stopped']; // if stopped then quit
-
-            if (y > me.y)
-                status_y = await client.move('up')
-            // status_x = await this.subIntention( 'go_to', {x: me.x, y: me.y+1} );
-            else if (y < me.y)
-                status_y = await client.move('down')
-            // status_x = await this.subIntention( 'go_to', {x: me.x, y: me.y-1} );
-
-            if (status_y) {
-                me.x = status_y.x;
-                me.y = status_y.y;
-            }
-
-            if (!status_x && !status_y) {
-                this.log('stucked');
-                throw 'stucked';
-            } else if (me.x == x && me.y == y) {
-                // this.log('target reached');
-            }
-
+            index++;
         }
 
-        return true;
 
+        //     let status_x = false;
+        //     let status_y = false;
+
+        //     // this.log('me', me, 'xy', x, y);
+
+        //     if (x > me.x)
+        //         status_x = await client.move('right')
+        //     // status_x = await this.subIntention( 'go_to', {x: me.x+1, y: me.y} );
+        //     else if (x < me.x)
+        //         status_x = await client.move('left')
+        //     // status_x = await this.subIntention( 'go_to', {x: me.x-1, y: me.y} );
+
+        //     if (status_x) {
+        //         me.x = status_x.x;
+        //         me.y = status_x.y;
+        //     }
+
+        //     if (this.stopped) throw ['stopped']; // if stopped then quit
+
+        //     if (y > me.y)
+        //         status_y = await client.move('up')
+        //     // status_x = await this.subIntention( 'go_to', {x: me.x, y: me.y+1} );
+        //     else if (y < me.y)
+        //         status_y = await client.move('down')
+        //     // status_x = await this.subIntention( 'go_to', {x: me.x, y: me.y-1} );
+
+        //     if (status_y) {
+        //         me.x = status_y.x;
+        //         me.y = status_y.y;
+        //     }
+
+        //     if (!status_x && !status_y) {
+        //         this.log('stucked');
+        //         throw 'stucked';
+        //     } else if (me.x == x && me.y == y) {
+        //         // this.log('target reached');
+        //     }
+
+        // }
+        return true;
     }
 }
 
