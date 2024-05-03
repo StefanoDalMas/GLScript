@@ -3,8 +3,7 @@
 // intention revision (quando voglio fare una cosa, devo priva(o durante) verificare che si possa ancora fare)
 // - tipo se sto andando a prendere un pacco che ricordo in posizione x, y appena la tile in pos x, y è visibile controllo se
 // il pacchetto è ancora presente e se ha valore maggiore di un tot
-// routing: fare if che controlla se il graph è già stato inizializzato o meno. Se no costruirlo con deliveroo_map
-// 
+// se devo fare random move ma ho un pacco in testa, lo consegno
 
 
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
@@ -99,11 +98,30 @@ client.onParcelsSensing(parcels => {
     /**
      * Best option is selected
      */
-    if (best_option)
+    if (best_option){
         // console.log("best option: ", best_option)
         myAgent.push(best_option)
-    else
+    }
+    else if (n_parcels > 0) { //todo mettere la selezione della delivery più vicina come funzione
+        let best_option;
+        let nearest = Number.MAX_VALUE;
+        for (const option of delivery_tiles) {
+            let [x, y] = option;
+            let current_d = distance({ x, y }, me)
+            // console.log("option is: ", option, " and distance is: ", current_d)
+            if (current_d < nearest) {
+                best_option = option
+                nearest = current_d
+            }
+        }
+
+        // console.log("putting down...")
+        myAgent.push(['go_put_down', best_option[0], best_option[1]])
+    }
+    else{
         myAgent.push(['random_move'])
+    }
+        
 
 })
 // client.onAgentsSensing( agentLoop )
@@ -193,7 +211,7 @@ class IntentionRevision {
                 // Remove from the queue
                 this.intention_queue.shift();
 
-            } 
+            }
 
             // Postpone next iteration at setImmediate
             await new Promise(res => setImmediate(res));
@@ -584,7 +602,6 @@ class RandomMove extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
     }
-
 }
 // plan classes are added to plan library 
 planLibrary.push(GoPickUp)
