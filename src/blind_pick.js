@@ -9,6 +9,7 @@
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import { remote, local } from "../config/config.js"
 import { astar, Graph } from "./astar.js"
+import ParcelLocationsSet from "./parcelLocationSet.js"
 
 let n_parcels = 0
 
@@ -21,6 +22,8 @@ function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
     return dx + dy;
 }
 
+//custom set to implement better parcel_locations
+//{ hash(x,y) : bool }
 
 
 /**
@@ -35,11 +38,13 @@ client.onYou(({ id, name, x, y, score }) => {
     me.score = score
 })
 const parcels = new Map();
-let parcel_locations = [];
+// let parcel_locations = []
+let parcel_locations = new ParcelLocationsSet()
 client.onParcelsSensing(async (perceived_parcels) => {
     for (const p of perceived_parcels) {
         parcels.set(p.id, p)
-        parcel_locations.push([p.x, p.y])
+        // parcel_locations.push([p.x, p.y])
+        parcel_locations.add(p.x, p.y)
     }
 })
 
@@ -162,7 +167,7 @@ class IntentionRevision {
                 // console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
                 // console.log('database:', delivery_db)
 
-                if (n_parcels > 3) {
+                if (n_parcels > 5) {
 
                     /**
                      * Options filtering
@@ -460,7 +465,8 @@ class GoPickUp extends Plan {
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await client.pickup()
-        parcel_locations = parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
+        // parcel_locations = parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
+        parcel_locations.delete(x, y)
         n_parcels += 1;
         if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
@@ -531,9 +537,11 @@ class BlindMove extends Plan {
                 n_parcels = 0
             }
             // if I pass on a parcel, I pick it up and remove it from the list
-            if (parcel_locations.some(arr => arr[0] === me.x && arr[1] === me.y)){
+            // if (parcel_locations.some(arr => arr[0] === me.x && arr[1] === me.y)){
+            if (parcel_locations.has(me.x, me.y)) {
                 await client.pickup()
-                parcel_locations = parcel_locations.filter(item => !(item[0] !== me.x && item[1] !== me.y))
+                // parcel_locations = parcel_locations.filter(item => !(item[0] !== me.x && item[1] !== me.y))
+                parcel_locations.delete(me.x, me.y)
                 n_parcels += 1;
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
