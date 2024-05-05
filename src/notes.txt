@@ -1,0 +1,40 @@
+belief set:
+    come viene popolato?
+    - pusho nel belief set tutti i pacchetti che vedo che non sono presi su
+belife revision(solo info su pacchetti per ora):
+    - prendo dalle opzioni totali quella migliore in base a:
+        + TODO (punteggio, distanza[aerea, manattan, astar?])
+    - pusho/faccio l'intenzione che ho deciso essere migliore
+
+while(1)
+intention set:
+    In questa dobbiamo capire quali intenzioni pushre nel set.
+    - pusho put down quando ... TODO (tipo num pacchetti e valore)
+    - pusho random move quando non 
+intention revision: (idealmente non conti pesanti)
+    - leggo l'intenzione e valuto se è ancora fattibile
+        + pick up: guardo se c'è ancora e se ha ancora un valore interessante (magari logica con time-stamp -> pushare nella coda di intenzioni anche quando è stata pushata)
+        + put down: no controlli
+        + go to: no controlli, ma non lo pushamo mai. Lo usiamo solo come subIntention
+        + random move: no controllo
+
+intentions implementations:
+    + pick up: prova a prendere il pacchetto che c'è scritto nell'intenzione. Se si blocca, l'intenzione finisce.
+    + put down: provo ad andare nel punto di consegna. Se mi blocco, vado in un'altro punto di consegna (in base a qualche distanza). Se non riesco neanche li, finisce senza buttar giu.
+    + go to: vado dove mi viene detto prendendo su i pacchi per strada e buttando giù se passo per un punto di consegna
+    + random move: sceglie tile camminabile a distanza 1 e ci va (con astar ma l'è stesso)
+
+TODO NOW
+- go to perchè si inchioda
+- come gestire gli stop
+- finire put down
+fine
+
+
+
+
+belief set -> dove sono i pacchetti che ho visto
+astar percorso che è sequenza di posizioni
+
+
+

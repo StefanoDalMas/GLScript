@@ -1,13 +1,5 @@
-//TODO:
-// random move
-// intention revision (quando voglio fare una cosa, devo priva(o durante) verificare che si possa ancora fare)
-// - tipo se sto andando a prendere un pacco che ricordo in posizione x, y appena la tile in pos x, y è visibile controllo se
-// il pacchetto è ancora presente e se ha valore maggiore di un tot
-// se devo fare random move ma ho un pacco in testa, lo consegno
-
-
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
-import { remote, local } from "../config/config.js"
+import { remote, local, MAX_PICKED_PARCELS, MIN_MAP_INDEX, MAX_MAP_INDEX } from "../config/config.js"
 import { astar, Graph } from "./astar.js"
 import ParcelLocationsSet from "./parcelLocationSet.js"
 
@@ -56,9 +48,9 @@ let delivery_tiles = [] // contains delivery tiles
 // init map to 0
 let deliveroo_graph;
 let deliveroo_map = [];
-for (let i = 0; i < 50; i++) {
+for (let i =  MIN_MAP_INDEX; i <  MAX_MAP_INDEX; i++) {
     deliveroo_map[i] = [];
-    for (let j = 0; j < 50; j++) {
+    for (let j =  MIN_MAP_INDEX; j <  MAX_MAP_INDEX; j++) {
         deliveroo_map[i][j] = 0;
     }
 }
@@ -110,22 +102,6 @@ client.onParcelsSensing(parcels => {
         // console.log("best option: ", best_option)
         myAgent.push(best_option)
     }
-    else if (n_parcels > 0) { //todo mettere la selezione della delivery più vicina come funzione
-        let best_option;
-        let nearest = Number.MAX_VALUE;
-        for (const option of delivery_tiles) {
-            let [x, y] = option;
-            let current_d = distance({ x, y }, me)
-            // console.log("option is: ", option, " and distance is: ", current_d)
-            if (current_d < nearest) {
-                best_option = option
-                nearest = current_d
-            }
-        }
-
-        // console.log("putting down...")
-        myAgent.push(['go_put_down', best_option[0], best_option[1]])
-    }
     else{
         myAgent.push(['random_move'])
     }
@@ -167,7 +143,7 @@ class IntentionRevision {
                 // console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
                 // console.log('database:', delivery_db)
 
-                if (n_parcels > 5) {
+                if (n_parcels > MAX_PICKED_PARCELS) {
 
                     /**
                      * Options filtering
@@ -484,8 +460,24 @@ class GoPutDown extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        await client.putdown()
-        n_parcels = 0
+        if (delivery_tiles.some(arr => arr[0] === me.x && arr[1] === me.y) && n_parcels > 0) {
+            await client.putdown()
+            n_parcels = 0
+        } else {
+            for (const option of delivery_tiles) {
+                if (option[0] != x && option[1] != y) {
+                    let best_option;
+                    let nearest = Number.MAX_VALUE;
+                    let [x, y] = option;
+                    let current_d = distance({ x, y }, me)
+                    // console.log("option is: ", option, " and distance is: ", current_d)
+                    if (current_d < nearest) {
+                        best_option = option
+                        nearest = current_d
+                    }
+                }
+            }
+        }
 
         if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
@@ -493,7 +485,7 @@ class GoPutDown extends Plan {
 
 }
 
-class BlindMove extends Plan {
+class Move extends Plan {
 
     static isApplicableTo(go_to, x, y) {
         return go_to == 'go_to';
@@ -548,7 +540,7 @@ class BlindMove extends Plan {
             index++;
         }
 
-
+        // manattan move (senza considerare mappa custom)
         //     let status_x = false;
         //     let status_y = false;
 
@@ -599,30 +591,32 @@ class RandomMove extends Plan {
     }
 
     async execute(random_move) {
-        if (this.stopped) throw ['stopped']; // if stopped then quit
+        console.log("x, y:", me.x, me.y)
         //from my position, choose an adjacent tile in deliveroo_map
         let possible_moves = []
+
         //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
-        if (deliveroo_map[me.x + 1][me.y] == 1) {
+        if (me.x != MAX_MAP_INDEX && deliveroo_map[me.x + 1][me.y] == 1) {
             possible_moves.push({ x: me.x + 1, y: me.y })
         }
-        if (deliveroo_map[me.x - 1][me.y] == 1) {
+        if (me.x != MIN_MAP_INDEX && deliveroo_map[me.x - 1][me.y] == 1) {
             possible_moves.push({ x: me.x - 1, y: me.y })
         }
-        if (deliveroo_map[me.x][me.y + 1] == 1) {
+        if (me.y != MAX_MAP_INDEX && deliveroo_map[me.x][me.y + 1] == 1) {
             possible_moves.push({ x: me.x, y: me.y + 1 })
         }
-        if (deliveroo_map[me.x][me.y - 1] == 1) {
+        if (me.y != MIN_MAP_INDEX && deliveroo_map[me.x][me.y - 1] == 1) {
             possible_moves.push({ x: me.x, y: me.y - 1 })
         }
+        // console.log("possible moves", possible_moves)
         let new_tile = possible_moves[Math.floor(Math.random() * possible_moves.length)]
+        console.log("new tile", new_tile)
         await this.subIntention(['go_to', new_tile.x, new_tile.y]);
-        if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
     }
 }
 // plan classes are added to plan library 
 planLibrary.push(GoPickUp)
 planLibrary.push(GoPutDown)
-planLibrary.push(BlindMove)
+planLibrary.push(Move)
 planLibrary.push(RandomMove)
