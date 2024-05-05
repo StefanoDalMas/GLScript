@@ -10,7 +10,7 @@ while(1)
 intention set:
     In questa dobbiamo capire quali intenzioni pushre nel set.
     - pusho put down quando ... TODO (tipo num pacchetti e valore)
-    - pusho random move quando non 
+    - pusho random move quando non ho altri obiettivi da fare
 intention revision: (idealmente non conti pesanti)
     - leggo l'intenzione e valuto se è ancora fattibile
         + pick up: guardo se c'è ancora e se ha ancora un valore interessante (magari logica con time-stamp -> pushare nella coda di intenzioni anche quando è stata pushata)
