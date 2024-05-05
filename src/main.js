@@ -188,14 +188,13 @@ client.onParcelsSensing(parcels => {
      * Best option is selected
      */
     if (best_option){
-        console.log("best option: ", best_option)
+        // console.log("best option: ", best_option)
         myAgent.push(best_option)
     }
         
 
 })
 // client.onAgentsSensing( agentLoop )
-// client.onYou( agentLoop )
 
 
 
@@ -231,7 +230,6 @@ class IntentionRevision {
                     }
                 }
 
-                console.log(result);
                 console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
 
                 if (n_parcels > MAX_PICKED_PARCELS) {
@@ -257,7 +255,6 @@ class IntentionRevision {
 
                 // Current intention
                 const intention = this.intention_queue[0];
-                console.log("TEST", intention)
 
                 // Is queued intention still valid? Do I still want to achieve it?
                 if (intention[0] == 'go_pick_up') {
