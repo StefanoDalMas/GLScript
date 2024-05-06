@@ -1,5 +1,5 @@
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
-import { remote, local, MAX_PICKED_PARCELS, MIN_MAP_INDEX, MAX_MAP_INDEX } from "../config/config.js"
+import { remote, local, MAX_PICKED_PARCELS } from "../config/config.js"
 import { astar, Graph } from "./astar.js"
 import ParcelLocationsSet from "./parcelLocationSet.js"
 
@@ -100,12 +100,47 @@ let n_parcels = 0
 const client = local
 // const client = remote
 
-function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
-    const dx = Math.abs(Math.round(x1) - Math.round(x2))
-    const dy = Math.abs(Math.round(y1) - Math.round(y2))
-    return dx + dy;
-}
 
+let deliveroo_map;
+let delivery_tiles;
+let deliveroo_graph;
+let MAX_WIDTH;
+let MAX_HEIGHT;
+client.onMap((width, height, tiles) => {
+
+    MAX_WIDTH = width - 1;
+    MAX_HEIGHT = height - 1;
+    
+    deliveroo_map = [];
+    for (let i = 0; i < width; i++) {
+        deliveroo_map[i] = [];
+        for (let j = 0; j < height; j++) {
+            deliveroo_map[i][j] = 0;
+        }
+    }
+    
+    delivery_tiles = [];
+    tiles.forEach(tile => {
+        deliveroo_map[tile.x][tile.y] = 1;
+        if (tile.delivery){
+            delivery_tiles.push([tile.x, tile.y]);
+        }
+    });
+
+    deliveroo_graph = new Graph(deliveroo_map);
+    
+})
+
+function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
+    // const dx = Math.abs(Math.round(x1) - Math.round(x2))
+    // const dy = Math.abs(Math.round(y1) - Math.round(y2))
+    // return dx + dy;
+    console.log("primo", x1, y1);
+    console.log("econdo", x2, y2);
+    let path = astar.search(deliveroo_graph, deliveroo_graph.grid[Math.round(x1)][Math.round(y1)], deliveroo_graph.grid[Math.round(x2)][Math.round(y2)]);
+    return path.length;
+
+}
 
 /**
  * Beliefset revision function
@@ -114,8 +149,8 @@ const me = {};
 client.onYou(({ id, name, x, y, score }) => {
     me.id = id
     me.name = name
-    me.x = x
-    me.y = y
+    me.x = Math.round(x)
+    me.y = Math.round(y)
     me.score = score
 })
 const parcels = new Map();
@@ -129,27 +164,8 @@ client.onParcelsSensing(async (perceived_parcels) => {
     }
 })
 
-// client.onConfig((param) => {
-//     console.log(param);
-// })
 
-let delivery_tiles = [] // contains delivery tiles
-// init map to 0
-let deliveroo_graph;
-let deliveroo_map = [];
-for (let i =  MIN_MAP_INDEX; i <  MAX_MAP_INDEX; i++) {
-    deliveroo_map[i] = [];
-    for (let j =  MIN_MAP_INDEX; j <  MAX_MAP_INDEX; j++) {
-        deliveroo_map[i][j] = 0;
-    }
-}
 
-client.onTile((x, y, delivery) => {
-    if (delivery) {
-        delivery_tiles.push([x, y]);
-    }
-    deliveroo_map[x][y] = 1;
-})
 
 /**
  * Options generation and filtering function
@@ -232,7 +248,7 @@ class IntentionRevision {
 
                 console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
 
-                if (n_parcels > MAX_PICKED_PARCELS) {
+                if (n_parcels > MAX_PICKED_PARCELS && me.x != undefined && me.y != undefined) {
 
                     /**
                      * Options filtering (trovo la tile di consegnap più vicina)
@@ -241,6 +257,9 @@ class IntentionRevision {
                     let nearest = Number.MAX_VALUE;
                     for (const option of delivery_tiles) {
                         let [x, y] = option;
+                        // let me_x = me.x;
+                        // let me_y = me.y;
+                        // let current_d = distance({ x, y }, {me_x, me_y})
                         let current_d = distance({ x, y }, me)
                         // console.log("option is: ", option, " and distance is: ", current_d)
                         if (current_d < nearest) {
@@ -249,7 +268,6 @@ class IntentionRevision {
                         }
                     }
 
-                    console.log("putting down...")
                     this.push(['go_put_down', best_option[0], best_option[1]])
                 }
 
@@ -281,9 +299,29 @@ class IntentionRevision {
                 // Remove from the queue
                 this.intention_queue.shift();
 
+            } else if (n_parcels) {
+                /**
+                 * Options filtering (trovo la tile di consegnap più vicina)
+                 */
+                let best_option;
+                let nearest = Number.MAX_VALUE;
+                for (const option of delivery_tiles) {
+                    let [x, y] = option;
+                    // let me_x = me.x;
+                    // let me_y = me.y;
+                    // let current_d = distance({ x, y }, {me_x, me_y})
+                    let current_d = distance({ x, y }, me)
+                    // console.log("option is: ", option, " and distance is: ", current_d)
+                    if (current_d < nearest) {
+                        best_option = option
+                        nearest = current_d
+                    }
+                }
+                this.push(['go_put_down', best_option[0], best_option[1]])
             } else {
                 this.push(['random_move'])
             }
+            
 
 
             // Postpone next iteration at setImmediate
@@ -473,9 +511,6 @@ class Move extends Plan {
 
     async execute(go_to, x, y) {
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        if (deliveroo_graph == undefined) {
-            deliveroo_graph = new Graph(deliveroo_map);
-        }
         
         //follow path until destination is reached
         while (me.x != x || me.y != y) {
@@ -499,8 +534,8 @@ class Move extends Plan {
                     status = await client.move('down')
                 }
                 if (status) {
-                    me.x = status.x;
-                    me.y = status.y;
+                    me.x = Math.round(status.x);
+                    me.y = Math.round(status.y);
                 } else {
                     this.log('stucked');
                     throw 'stucked';
@@ -543,23 +578,30 @@ class RandomMove extends Plan {
 
     async execute(random_move) {
         if (this.stopped) throw ['stopped']; // if stopped then quit
-
+        console.log("entro random")
         if (me.x != undefined && me.y != undefined) {
+            console.log("entro if", me.x)
+            console.log("entro if", me.y)
             //from my position, choose an adjacent tile in deliveroo_map
             let possible_moves = []
             //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
-            if (me.x != MAX_MAP_INDEX && deliveroo_map[me.x + 1][me.y] == 1) {
+
+            if (me.x != MAX_WIDTH && deliveroo_map[me.x + 1][me.y] == 1) {
                 possible_moves.push({ x: me.x + 1, y: me.y })
             }
-            if (me.x != MIN_MAP_INDEX && deliveroo_map[me.x - 1][me.y] == 1) {
+            console.log("entro random1", possible_moves)
+            if (me.x != 0 && deliveroo_map[me.x - 1][me.y] == 1) {
                 possible_moves.push({ x: me.x - 1, y: me.y })
             }
-            if (me.y != MAX_MAP_INDEX && deliveroo_map[me.x][me.y + 1] == 1) {
+            console.log("entro random2", possible_moves)
+            if (me.y != MAX_HEIGHT && deliveroo_map[me.x][me.y + 1] == 1) {
                 possible_moves.push({ x: me.x, y: me.y + 1 })
             }
-            if (me.y != MIN_MAP_INDEX && deliveroo_map[me.x][me.y - 1] == 1) {
+            console.log("entro random3", possible_moves)
+            if (me.y != 0 && deliveroo_map[me.x][me.y - 1] == 1) {
                 possible_moves.push({ x: me.x, y: me.y - 1 })
             }
+            console.log("entro random4", possible_moves)
 
             if (possible_moves.length === 0) {
                 this.log('stucked');
@@ -569,7 +611,7 @@ class RandomMove extends Plan {
             console.log("possible moves", possible_moves)
             let new_tile = possible_moves[Math.floor(Math.random() * possible_moves.length)]
             console.log("new tile", new_tile)
-            
+
             if (this.stopped) throw ['stopped']; // if stopped then quit
 
             await this.subIntention(['go_to', new_tile.x, new_tile.y]);
