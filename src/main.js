@@ -17,7 +17,7 @@ class Intention {
         return this.#stopped;
     }
     stop() {
-        this.log( 'stop intention', ...this.#predicate );
+        this.log('stop intention', ...this.#predicate);
         this.#stopped = true;
         if (this.#current_plan)
             this.#current_plan.stop();
@@ -69,7 +69,7 @@ class Intention {
             if (planClass.isApplicableTo(...this.predicate)) {
                 // plan is instantiated
                 this.#current_plan = new planClass(this.#parent);
-                console.log("current plan",this.#current_plan)
+                console.log("current plan", this.#current_plan)
                 this.log('achieving intention', ...this.predicate, 'with plan', planClass.name);
                 // and plan is executed and result returned
                 try {
@@ -110,7 +110,7 @@ client.onMap((width, height, tiles) => {
 
     MAX_WIDTH = width - 1;
     MAX_HEIGHT = height - 1;
-    
+
     deliveroo_map = [];
     for (let i = 0; i < width; i++) {
         deliveroo_map[i] = [];
@@ -118,17 +118,17 @@ client.onMap((width, height, tiles) => {
             deliveroo_map[i][j] = 0;
         }
     }
-    
+
     delivery_tiles = [];
     tiles.forEach(tile => {
         deliveroo_map[tile.x][tile.y] = 1;
-        if (tile.delivery){
+        if (tile.delivery) {
             delivery_tiles.push([tile.x, tile.y]);
         }
     });
 
     deliveroo_graph = new Graph(deliveroo_map);
-    
+
 })
 
 function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
@@ -136,8 +136,8 @@ function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
     // const dy = Math.abs(Math.round(y1) - Math.round(y2))
     // return dx + dy;
     console.log("primo", x1, y1);
-    console.log("econdo", x2, y2);
-    let path = astar.search(deliveroo_graph, deliveroo_graph.grid[Math.round(x1)][Math.round(y1)], deliveroo_graph.grid[Math.round(x2)][Math.round(y2)]);
+    console.log("my position", x2, y2);
+    let path = astar.search(deliveroo_graph, deliveroo_graph.grid[Math.round(x2)][Math.round(y2)], deliveroo_graph.grid[Math.round(x1)][Math.round(y1)]);
     return path.length;
 
 }
@@ -160,7 +160,9 @@ client.onParcelsSensing(async (perceived_parcels) => {
     for (const p of perceived_parcels) {
         parcels.set(p.id, p)
         // parcel_locations.push([p.x, p.y])
-        parcel_locations.add(p.x, p.y)
+        if (!p.carriedBy){
+            parcel_locations.add(p.x, p.y)
+        }
     }
 })
 
@@ -190,7 +192,8 @@ client.onParcelsSensing(parcels => {
     let best_option;
     let nearest = Number.MAX_VALUE;
     for (const option of options) {
-        if (option[0] == 'go_pick_up') {
+        //check if option is in myAgent.intention_queue
+        if (option[0] == 'go_pick_up' && !myAgent.intention_queue.find((i) => i.predicate.join(' ') == option.join(' '))) {
             let [go_pick_up, x, y, id] = option;
             let current_d = distance({ x, y }, me)
             if (current_d < nearest) {
@@ -203,11 +206,11 @@ client.onParcelsSensing(parcels => {
     /**
      * Best option is selected
      */
-    if (best_option){
+    if (best_option && myAgent.intention_queue.length < MAX_PICKED_PARCELS) {
         // console.log("best option: ", best_option)
         myAgent.push(best_option)
     }
-        
+
 
 })
 // client.onAgentsSensing( agentLoop )
@@ -257,9 +260,6 @@ class IntentionRevision {
                     let nearest = Number.MAX_VALUE;
                     for (const option of delivery_tiles) {
                         let [x, y] = option;
-                        // let me_x = me.x;
-                        // let me_y = me.y;
-                        // let current_d = distance({ x, y }, {me_x, me_y})
                         let current_d = distance({ x, y }, me)
                         // console.log("option is: ", option, " and distance is: ", current_d)
                         if (current_d < nearest) {
@@ -287,13 +287,13 @@ class IntentionRevision {
                 // else if () {
 
                 // }
-                    
+
                 // Start achieving intention
                 await intention.achieve()
                     // Catch eventual error and continue
                     .catch(error => {
                         console.log(error)
-                        console.log( 'Failed intention', ...intention.predicate, 'with error:', ...error )
+                        console.log('Failed intention', ...intention.predicate, 'with error:', ...error)
                     });
 
                 // Remove from the queue
@@ -321,7 +321,7 @@ class IntentionRevision {
             } else {
                 this.push(['random_move'])
             }
-            
+
 
 
             // Postpone next iteration at setImmediate
@@ -409,9 +409,9 @@ class IntentionRevisionRevise extends IntentionRevision {
 }
 
 
-// const myAgent = new IntentionRevisionQueue();
+const myAgent = new IntentionRevisionQueue();
 // const myAgent = new IntentionRevisionStack();
-const myAgent = new IntentionRevisionReplace();
+// const myAgent = new IntentionRevisionReplace();
 // const myAgent = new IntentionRevisionRevise();
 
 myAgent.loop();
@@ -428,7 +428,7 @@ class Plan {
     // This is used to stop the plan
     #stopped = false;
     stop() {
-        this.log( 'stop plan' );
+        this.log('stop plan');
         this.#stopped = true;
         for (const i of this.#sub_intentions) {
             i.stop();
@@ -475,13 +475,16 @@ class GoPickUp extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        await client.pickup()
+        let status = await client.pickup()
         // parcel_locations = parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
-        parcel_locations.delete(x, y)
-        n_parcels += 1;
-        console.log("provo a tirar su con PICK UP")
-        if (this.stopped) throw ['stopped']; // if stopped then quit
-        return true;
+        if (status){
+            parcel_locations.delete(x, y)
+            n_parcels += 1;
+            console.log("provo a tirar su con PICK UP")
+            if (this.stopped) throw ['stopped']; // if stopped then quit
+            return true;
+        }
+        return false;
     }
 
 }
@@ -496,9 +499,13 @@ class GoPutDown extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        await client.putdown();
-        n_parcels = 0;
-        return true;
+        let status = await client.putdown();
+        if (status){
+            n_parcels = 0;
+            return true;
+        }
+        return false;
+        
     }
 
 }
@@ -511,53 +518,61 @@ class Move extends Plan {
 
     async execute(go_to, x, y) {
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        
+
         //follow path until destination is reached
-        while (me.x != x || me.y != y) {
+        let me_x = Math.round(me.x);
+        let me_y = Math.round(me.y);
+        while (me_x != x || me_y != y) {
             if (this.stopped) throw ['stopped']; // if stopped then quit
 
-            let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me.x][me.y], deliveroo_graph.grid[x][y]);
+            let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me_x][me_y], deliveroo_graph.grid[x][y]);
 
-            for (let index=0; index<path.length; index++) {
+            for (let index = 0; index < path.length; index++) {
                 if (this.stopped) throw ['stopped']; // if stopped then quit
 
                 let status = false;
                 let next_tile = path[index];
                 //evaluate if it is a up, down, left or right move
-                if (next_tile.x == me.x + 1 && next_tile.y == me.y) {
+                if (next_tile.x == me_x + 1 && next_tile.y == me_y) {
                     status = await client.move('right')
-                } else if (next_tile.x == me.x - 1 && next_tile.y == me.y) {
+                } else if (next_tile.x == me_x - 1 && next_tile.y == me_y) {
                     status = await client.move('left')
-                } else if (next_tile.x == me.x && next_tile.y == me.y + 1) {
+                } else if (next_tile.x == me_x && next_tile.y == me_y + 1) {
                     status = await client.move('up')
-                } else if (next_tile.x == me.x && next_tile.y == me.y - 1) {
+                } else if (next_tile.x == me_x && next_tile.y == me_y - 1) {
                     status = await client.move('down')
                 }
                 if (status) {
                     me.x = Math.round(status.x);
+                    me_x = me.x;
                     me.y = Math.round(status.y);
+                    me_y = me.y;
                 } else {
                     this.log('stucked');
-                    throw 'stucked';
+                    throw ['stucked'];
                 }
-    
-                if (this.stopped) throw ['stopped']; // if stopped then quit
-    
-                if (me.x != x && me.y != y) {
+
+                // if (this.stopped) throw ['stopped']; // if stopped then quit
+
+                if (me_x != x || me_y != y) {
                     // se sono su una consegna, consegno
-                    if (delivery_tiles.some(tile => tile[0] === me.x && tile[1] === me.y) && n_parcels > 0) {
-                        await client.putdown()
-                        n_parcels = 0
+                    if (delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && n_parcels > 0) {
+                        let status = await client.putdown()
+                        if (status) {
+                            n_parcels = 0
+                        }
                     }
                     if (this.stopped) throw ['stopped']; // if stopped then quit
                     // if I pass on a parcel, I pick it up and remove it from belief set
                     // if (parcel_locations.some(arr => arr[0] === me.x && arr[1] === me.y)){
-                    if (parcel_locations.has(me.x, me.y)) {
+                    if (parcel_locations.has(me_x, me_y)) {
                         console.log("provo a tirar su con MOVE")
-                        await client.pickup()
+                        let status = await client.pickup()
                         // parcel_locations = parcel_locations.filter(item => !(item[0] !== me.x && item[1] !== me.y))
-                        parcel_locations.delete(me.x, me.y)
-                        n_parcels += 1;
+                        if (status) {
+                            parcel_locations.delete(me_x, me_y)
+                            n_parcels += 1;
+                        }
                     }
                 }
                 if (this.stopped) throw ['stopped']; // if stopped then quit
@@ -586,20 +601,22 @@ class RandomMove extends Plan {
             let possible_moves = []
             //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
 
-            if (me.x != MAX_WIDTH && deliveroo_map[me.x + 1][me.y] == 1) {
-                possible_moves.push({ x: me.x + 1, y: me.y })
+            let me_x = Math.round(me.x);
+            let me_y = Math.round(me.y);
+            if (me_x != MAX_WIDTH && deliveroo_map[me_x + 1][me_y] == 1) {
+                possible_moves.push({ x: me_x + 1, y: me_y })
             }
             console.log("entro random1", possible_moves)
-            if (me.x != 0 && deliveroo_map[me.x - 1][me.y] == 1) {
-                possible_moves.push({ x: me.x - 1, y: me.y })
+            if (me_x != 0 && deliveroo_map[me_x - 1][me_y] == 1) {
+                possible_moves.push({ x: me_x - 1, y: me_y })
             }
             console.log("entro random2", possible_moves)
-            if (me.y != MAX_HEIGHT && deliveroo_map[me.x][me.y + 1] == 1) {
-                possible_moves.push({ x: me.x, y: me.y + 1 })
+            if (me_y != MAX_HEIGHT && deliveroo_map[me_x][me_y + 1] == 1) {
+                possible_moves.push({ x: me_x, y: me_y + 1 })
             }
             console.log("entro random3", possible_moves)
-            if (me.y != 0 && deliveroo_map[me.x][me.y - 1] == 1) {
-                possible_moves.push({ x: me.x, y: me.y - 1 })
+            if (me_y != 0 && deliveroo_map[me_x][me_y - 1] == 1) {
+                possible_moves.push({ x: me_x, y: me_y - 1 })
             }
             console.log("entro random4", possible_moves)
 

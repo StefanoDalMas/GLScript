@@ -4,7 +4,7 @@ class ParcelLocationsSet{
     }
 
     _hash(x,y){
-        return ((x.toString()+ y.toString()).hashCode())
+        return ((x.toString()+ y.toString()))
     }
 
     add(x,y){
