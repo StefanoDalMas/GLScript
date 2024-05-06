@@ -242,7 +242,7 @@ class IntentionRevision {
                     for (const option of delivery_tiles) {
                         let [x, y] = option;
                         let current_d = distance({ x, y }, me)
-                        console.log("option is: ", option, " and distance is: ", current_d)
+                        // console.log("option is: ", option, " and distance is: ", current_d)
                         if (current_d < nearest) {
                             best_option = option
                             nearest = current_d
@@ -275,7 +275,7 @@ class IntentionRevision {
                     // Catch eventual error and continue
                     .catch(error => {
                         console.log(error)
-                        // console.log( 'Failed intention', ...intention.predicate, 'with error:', ...error )
+                        console.log( 'Failed intention', ...intention.predicate, 'with error:', ...error )
                     });
 
                 // Remove from the queue
@@ -304,7 +304,7 @@ class IntentionRevisionQueue extends IntentionRevision {
     async push(predicate) {
 
         if (predicate) {
-            console.log("predicate is: ", predicate)
+            // console.log("predicate is: ", predicate)
             // Check if already queued
             if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
                 return; // intention is already queued
@@ -322,7 +322,7 @@ class IntentionRevisionStack extends IntentionRevision {
     async push(predicate) {
 
         if (predicate) {
-            console.log("predicate is: ", predicate)
+            // console.log("predicate is: ", predicate)
             // Check if already queued
             if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
                 return; // intention is already queued
@@ -441,6 +441,7 @@ class GoPickUp extends Plan {
         // parcel_locations = parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
         parcel_locations.delete(x, y)
         n_parcels += 1;
+        console.log("provo a tirar su con PICK UP")
         if (this.stopped) throw ['stopped']; // if stopped then quit
         return true;
     }
@@ -456,57 +457,11 @@ class GoPutDown extends Plan {
     async execute(go_put_down, x, y, id) {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await this.subIntention(['go_to', x, y]);
-        if (this.stopped) {}
-        if (delivery_tiles.some(arr => arr[0] === me.x && arr[1] === me.y) && n_parcels > 0) {
-            await client.putdown()
-            n_parcels = 0
-        } else {
-            for (const option of delivery_tiles) {
-                if (option[0] != x && option[1] != y) {
-                    let best_option;
-                    let nearest = Number.MAX_VALUE;
-                    let [x, y] = option;
-                    let current_d = distance({ x, y }, me)
-                    // console.log("option is: ", option, " and distance is: ", current_d)
-                    if (current_d < nearest) {
-                        best_option = option
-                        nearest = current_d
-                    }
-                }
-            }
-        }
-
+        if (this.stopped) throw ['stopped']; // if stopped then quit
+        await client.putdown();
+        n_parcels = 0;
         return true;
     }
-
-    // async execute(go_put_down, x, y, id) {
-    //     if (this.stopped) throw ['stopped']; // if stopped then quit
-    //     await this.subIntention(['go_to', x, y]);
-    //     // se mi blocco provo ad andare ad un'altra delivery tile
-    //     if (this.stopped) {
-    //         let best_option;
-    //         let nearest = Number.MAX_VALUE;
-    //         for (const option of delivery_tiles) {
-    //             if (option[0] != x && option[1] != y) {
-    //                 let [x, y] = option;
-    //                 let current_d = distance({ x, y }, me)
-    //                 // console.log("option is: ", option, " and distance is: ", current_d)
-    //                 if (current_d < nearest) {
-    //                     best_option = option
-    //                     nearest = current_d
-    //                 }
-    //             }
-    //         }
-    //         await this.subIntention(['go_to', best_option.x, best_option.y]);
-    //         if (this.stopped) throw ['stopped'];
-    //     }
-    //     if (delivery_tiles.some(arr => arr[0] === me.x && arr[1] === me.y) && n_parcels > 0) {
-    //         await client.putdown()
-    //         n_parcels = 0
-    //     }
-
-    //     return true;
-    // }
 
 }
 
@@ -517,94 +472,65 @@ class Move extends Plan {
     }
 
     async execute(go_to, x, y) {
+        if (this.stopped) throw ['stopped']; // if stopped then quit
         if (deliveroo_graph == undefined) {
             deliveroo_graph = new Graph(deliveroo_map);
         }
-        let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me.x][me.y], deliveroo_graph.grid[x][y]);
-        let index = 0;
-
+        
         //follow path until destination is reached
         while (me.x != x || me.y != y) {
-
-            let status = false;
-            
-            if (this.stopped) throw ['stopped']; // if stopped then quit
-            let next_tile = path[index];
-            //evaluate if it is a up, down, left or right move
-            if (next_tile.x == me.x + 1 && next_tile.y == me.y) {
-                status = await client.move('right')
-            } else if (next_tile.x == me.x - 1 && next_tile.y == me.y) {
-                status = await client.move('left')
-            } else if (next_tile.x == me.x && next_tile.y == me.y + 1) {
-                status = await client.move('up')
-            } else if (next_tile.x == me.x && next_tile.y == me.y - 1) {
-                status = await client.move('down')
-            }
-            if (status) {
-                me.x = status.x;
-                me.y = status.y;
-            }
-
             if (this.stopped) throw ['stopped']; // if stopped then quit
 
-            //check if [9,3] is in delivery_tiles
-            if (delivery_tiles.some(tile => tile[0] === me.x && tile[1] === me.y) && n_parcels > 0) {
-                await client.putdown()
-                n_parcels = 0
-            }
-            // if I pass on a parcel, I pick it up and remove it from belief set
-            // if (parcel_locations.some(arr => arr[0] === me.x && arr[1] === me.y)){
-            if (parcel_locations.has(me.x, me.y)) {
-                await client.pickup()
-                // parcel_locations = parcel_locations.filter(item => !(item[0] !== me.x && item[1] !== me.y))
-                parcel_locations.delete(me.x, me.y)
-                n_parcels += 1;
+            let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me.x][me.y], deliveroo_graph.grid[x][y]);
+
+            for (let index=0; index<path.length; index++) {
+                if (this.stopped) throw ['stopped']; // if stopped then quit
+
+                let status = false;
+                let next_tile = path[index];
+                //evaluate if it is a up, down, left or right move
+                if (next_tile.x == me.x + 1 && next_tile.y == me.y) {
+                    status = await client.move('right')
+                } else if (next_tile.x == me.x - 1 && next_tile.y == me.y) {
+                    status = await client.move('left')
+                } else if (next_tile.x == me.x && next_tile.y == me.y + 1) {
+                    status = await client.move('up')
+                } else if (next_tile.x == me.x && next_tile.y == me.y - 1) {
+                    status = await client.move('down')
+                }
+                if (status) {
+                    me.x = status.x;
+                    me.y = status.y;
+                } else {
+                    this.log('stucked');
+                    throw 'stucked';
+                }
+    
+                if (this.stopped) throw ['stopped']; // if stopped then quit
+    
+                if (me.x != x && me.y != y) {
+                    // se sono su una consegna, consegno
+                    if (delivery_tiles.some(tile => tile[0] === me.x && tile[1] === me.y) && n_parcels > 0) {
+                        await client.putdown()
+                        n_parcels = 0
+                    }
+                    if (this.stopped) throw ['stopped']; // if stopped then quit
+                    // if I pass on a parcel, I pick it up and remove it from belief set
+                    // if (parcel_locations.some(arr => arr[0] === me.x && arr[1] === me.y)){
+                    if (parcel_locations.has(me.x, me.y)) {
+                        console.log("provo a tirar su con MOVE")
+                        await client.pickup()
+                        // parcel_locations = parcel_locations.filter(item => !(item[0] !== me.x && item[1] !== me.y))
+                        parcel_locations.delete(me.x, me.y)
+                        n_parcels += 1;
+                    }
+                }
+                if (this.stopped) throw ['stopped']; // if stopped then quit
             }
 
             if (this.stopped) throw ['stopped']; // if stopped then quit
-            index++;
         }
 
-        // manattan move (senza considerare mappa custom)
-        //     let status_x = false;
-        //     let status_y = false;
-
-        //     // this.log('me', me, 'xy', x, y);
-
-        //     if (x > me.x)
-        //         status_x = await client.move('right')
-        //     // status_x = await this.subIntention( 'go_to', {x: me.x+1, y: me.y} );
-        //     else if (x < me.x)
-        //         status_x = await client.move('left')
-        //     // status_x = await this.subIntention( 'go_to', {x: me.x-1, y: me.y} );
-
-        //     if (status_x) {
-        //         me.x = status_x.x;
-        //         me.y = status_x.y;
-        //     }
-
-        //     if (this.stopped) throw ['stopped']; // if stopped then quit
-
-        //     if (y > me.y)
-        //         status_y = await client.move('up')
-        //     // status_x = await this.subIntention( 'go_to', {x: me.x, y: me.y+1} );
-        //     else if (y < me.y)
-        //         status_y = await client.move('down')
-        //     // status_x = await this.subIntention( 'go_to', {x: me.x, y: me.y-1} );
-
-        //     if (status_y) {
-        //         me.x = status_y.x;
-        //         me.y = status_y.y;
-        //     }
-
-        //     if (!status_x && !status_y) {
-        //         this.log('stucked');
-        //         throw 'stucked';
-        //     } else if (me.x == x && me.y == y) {
-        //         // this.log('target reached');
-        //     }
-
-        // }
         return true;
     }
 }
@@ -616,6 +542,7 @@ class RandomMove extends Plan {
     }
 
     async execute(random_move) {
+        if (this.stopped) throw ['stopped']; // if stopped then quit
 
         if (me.x != undefined && me.y != undefined) {
             //from my position, choose an adjacent tile in deliveroo_map
@@ -633,9 +560,18 @@ class RandomMove extends Plan {
             if (me.y != MIN_MAP_INDEX && deliveroo_map[me.x][me.y - 1] == 1) {
                 possible_moves.push({ x: me.x, y: me.y - 1 })
             }
+
+            if (possible_moves.length === 0) {
+                this.log('stucked');
+                throw 'stucked';
+            }
+
             console.log("possible moves", possible_moves)
             let new_tile = possible_moves[Math.floor(Math.random() * possible_moves.length)]
             console.log("new tile", new_tile)
+            
+            if (this.stopped) throw ['stopped']; // if stopped then quit
+
             await this.subIntention(['go_to', new_tile.x, new_tile.y]);
             return true;
         } else {

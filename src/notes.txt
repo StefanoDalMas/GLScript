@@ -25,13 +25,10 @@ intentions implementations:
     + random move: sceglie tile camminabile a distanza 1 e ci va (con astar ma l'è stesso)
 
 TODO NOW
-- go to perchè si inchioda
-- come gestire gli stop -> io ho capito :)
 - finire put down
 - il conto dei pacchi non funziona perchè con la coda che sostituisce le intention i pick up vengono contati sia della go pick up che dalla move.
     Da fixare o mettendo un controllo prima di tirare su il pacchetto oppure rimuovere il pick up dalla move e pensare a come fare con sub intention/altro
-- se si cerca di accedere a me.qualcosa all'inizio nei plan, non si legge niente, come se dovesse ancora essere popolato il campo dell'oggetto me.
-- da sistemare il doppio onParcelsSensing()
+- agent sensing
 fine
 
 
