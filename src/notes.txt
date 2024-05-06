@@ -25,13 +25,16 @@ intentions implementations:
     + random move: sceglie tile camminabile a distanza 1 e ci va (con astar ma l'è stesso)
 
 TODO NOW
-- finire put down
-- il conto dei pacchi non funziona perchè con la coda che sostituisce le intention i pick up vengono contati sia della go pick up che dalla move.
-    Da fixare o mettendo un controllo prima di tirare su il pacchetto oppure rimuovere il pick up dalla move e pensare a come fare con sub intention/altro
 - agent sensing
+    -> finire put down
+- usare MaxHeap (priorità più alta data al)
+- metodo per valutare quanti pacchetti ho in testa(se mi scadono penso di averne più del previsto)
 fine
 
 
+Funzione di priorità:
+    - gain = (parcel.value - distance) - (n_parcels * distance)
+    - idea crazyness/lazyness
 
 
 belief set -> dove sono i pacchetti che ho visto

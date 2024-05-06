@@ -1,7 +1,7 @@
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import { remote, local, MAX_PICKED_PARCELS } from "../config/config.js"
 import { astar, Graph } from "./astar.js"
-import ParcelLocationsSet from "./parcelLocationSet.js"
+import LocationsSet from "./locationSet.js"
 
 /**
  * Intention
@@ -96,6 +96,7 @@ class Intention {
 
 
 let n_parcels = 0
+const MAX_QUEUE = 3
 
 const client = local
 // const client = remote
@@ -155,12 +156,12 @@ client.onYou(({ id, name, x, y, score }) => {
 })
 const parcels = new Map();
 // let parcel_locations = []
-let parcel_locations = new ParcelLocationsSet()
+let parcel_locations = new LocationsSet()
 client.onParcelsSensing(async (perceived_parcels) => {
     for (const p of perceived_parcels) {
         parcels.set(p.id, p)
         // parcel_locations.push([p.x, p.y])
-        if (!p.carriedBy){
+        if (!p.carriedBy) {
             parcel_locations.add(p.x, p.y)
         }
     }
@@ -206,7 +207,7 @@ client.onParcelsSensing(parcels => {
     /**
      * Best option is selected
      */
-    if (best_option && myAgent.intention_queue.length < MAX_PICKED_PARCELS) {
+    if (best_option && myAgent.intention_queue.length < MAX_QUEUE) {
         // console.log("best option: ", best_option)
         myAgent.push(best_option)
     }
@@ -477,7 +478,7 @@ class GoPickUp extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await client.pickup()
         // parcel_locations = parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
-        if (status){
+        if (status) {
             parcel_locations.delete(x, y)
             n_parcels += 1;
             console.log("provo a tirar su con PICK UP")
@@ -500,12 +501,12 @@ class GoPutDown extends Plan {
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await client.putdown();
-        if (status){
+        if (status) {
             n_parcels = 0;
             return true;
         }
         return false;
-        
+
     }
 
 }

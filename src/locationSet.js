@@ -1,10 +1,10 @@
-class ParcelLocationsSet{
+class LocationsSet{
     constructor(){
         this.parcel_locations = {}
     }
 
     _hash(x,y){
-        return ((x.toString()+ y.toString()))
+        return ((x.toString()+ y.toString()).hashCode())
     }
 
     add(x,y){
@@ -32,4 +32,4 @@ String.prototype.hashCode = function () {
     return hash;
 };
 
-export default ParcelLocationsSet;
+export default LocationsSet;
