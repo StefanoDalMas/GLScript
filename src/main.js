@@ -616,29 +616,31 @@ class RandomMove extends Plan {
     }
 
     async execute(random_move) {
-        console.log("ENTRO RANDOM")
-        console.log("x, y:", me.x, me.y)
-        //from my position, choose an adjacent tile in deliveroo_map
-        let possible_moves = []
 
-        //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
-        if (me.x != MAX_MAP_INDEX && deliveroo_map[me.x + 1][me.y] == 1) {
-            possible_moves.push({ x: me.x + 1, y: me.y })
+        if (me.x != undefined && me.y != undefined) {
+            //from my position, choose an adjacent tile in deliveroo_map
+            let possible_moves = []
+            //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
+            if (me.x != MAX_MAP_INDEX && deliveroo_map[me.x + 1][me.y] == 1) {
+                possible_moves.push({ x: me.x + 1, y: me.y })
+            }
+            if (me.x != MIN_MAP_INDEX && deliveroo_map[me.x - 1][me.y] == 1) {
+                possible_moves.push({ x: me.x - 1, y: me.y })
+            }
+            if (me.y != MAX_MAP_INDEX && deliveroo_map[me.x][me.y + 1] == 1) {
+                possible_moves.push({ x: me.x, y: me.y + 1 })
+            }
+            if (me.y != MIN_MAP_INDEX && deliveroo_map[me.x][me.y - 1] == 1) {
+                possible_moves.push({ x: me.x, y: me.y - 1 })
+            }
+            console.log("possible moves", possible_moves)
+            let new_tile = possible_moves[Math.floor(Math.random() * possible_moves.length)]
+            console.log("new tile", new_tile)
+            await this.subIntention(['go_to', new_tile.x, new_tile.y]);
+            return true;
+        } else {
+            return false;
         }
-        if (me.x != MIN_MAP_INDEX && deliveroo_map[me.x - 1][me.y] == 1) {
-            possible_moves.push({ x: me.x - 1, y: me.y })
-        }
-        if (me.y != MAX_MAP_INDEX && deliveroo_map[me.x][me.y + 1] == 1) {
-            possible_moves.push({ x: me.x, y: me.y + 1 })
-        }
-        if (me.y != MIN_MAP_INDEX && deliveroo_map[me.x][me.y - 1] == 1) {
-            possible_moves.push({ x: me.x, y: me.y - 1 })
-        }
-        console.log("possible moves", possible_moves)
-        let new_tile = possible_moves[Math.floor(Math.random() * possible_moves.length)]
-        console.log("new tile", new_tile)
-        await this.subIntention(['go_to', new_tile.x, new_tile.y]);
-        return true;
     }
 }
 // plan classes are added to plan library 
