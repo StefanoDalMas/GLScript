@@ -161,22 +161,33 @@ client.onAgentsSensing(async (agents) => {
     console.log("agents", agents)
     let agent_x = Math.round(me.x);
     let agent_y = Math.round(me.y);
-    //for each agent that I see, set the old location and the new location
-    // if it is the first time I see the agent, the old location is the same as the new location
+//     //for each agent that I see, set the old location and the new location
+//     // if it is the first time I see the agent, the old location is the same as the new location
+//     agents.forEach(agent => {
+//         let agent_id = agent.id;
+//         let old_location = agentsLocations.get(agent_id) ? agentsLocations.get(agent_id)[1] : { x: agent_x, y: agent_y };
+//         let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
+//         agentsLocations.set(agent_id, [old_location, new_location]);
+//     })
+//     //for clarity, the 2 for loops are separated
+//     agentsLocations.forEach((value, key) => {
+//         console.log("value is      ", value);
+//         let old_location = value[0];
+//         let new_location = value[1];
+//         deliveroo_graph.setWalkable(old_location.x, old_location.y);
+//         deliveroo_graph.setWall(new_location.x, new_location.y);
+// })
+// Better? idea: I only set wall to the agents that I actually see
+    for(let i=0;i<MAX_WIDTH;i++){
+        for(let j=0;j<MAX_HEIGHT;j++){
+            deliveroo_graph.setWalkable(i,j);
+        }
+    }
     agents.forEach(agent => {
         let agent_id = agent.id;
-        let old_location = agentsLocations.get(agent_id) ? agentsLocations.get(agent_id)[1] : { x: agent_x, y: agent_y };
         let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
-        agentsLocations.set(agent_id, [old_location, new_location]);
-    })
-    //for clarity, the 2 for loops are separated
-    agentsLocations.forEach((value, key) => {
-        console.log("value is      ", value);
-        let old_location = value[0];
-        let new_location = value[1];
-        deliveroo_graph.setWalkable(old_location.x, old_location.y);
         deliveroo_graph.setWall(new_location.x, new_location.y);
-})
+    })
 })
 
 function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
