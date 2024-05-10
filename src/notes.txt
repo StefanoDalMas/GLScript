@@ -28,8 +28,6 @@ TODO NOW
 - gestione parcelle presenti:
     1 - settare un timer ogni PARCEL_DECADING_INTERVAL che decrementa gli score delle parcelle salvate
     2 - quando dovrei vedere la parcella, controllare che sia ancora la
-- agent sensing
-    -> finire put down
 - usare MaxHeap (priorità più alta data al)
 - valutare metrica per evitare parcelle inutili (mi calcolo se riesco a consegnarla prima di prenderla su, magari non ha senso prenderla)
 fine

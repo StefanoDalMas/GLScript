@@ -155,8 +155,28 @@ client.onMap((width, height, tiles) => {
 })
 
 
+let agentsLocations = new Map(); //agent.id -> (old_location, new_location)
+
 client.onAgentsSensing(async (agents) => {
     console.log("agents", agents)
+    let agent_x = Math.round(me.x);
+    let agent_y = Math.round(me.y);
+    //for each agent that I see, set the old location and the new location
+    // if it is the first time I see the agent, the old location is the same as the new location
+    agents.forEach(agent => {
+        let agent_id = agent.id;
+        let old_location = agentsLocations.get(agent_id) ? agentsLocations.get(agent_id)[1] : { x: agent_x, y: agent_y };
+        let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
+        agentsLocations.set(agent_id, [old_location, new_location]);
+    })
+    //for clarity, the 2 for loops are separated
+    agentsLocations.forEach((value, key) => {
+        console.log("value is      ", value);
+        let old_location = value[0];
+        let new_location = value[1];
+        deliveroo_graph.setWalkable(old_location.x, old_location.y);
+        deliveroo_graph.setWall(new_location.x, new_location.y);
+})
 })
 
 function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
@@ -560,23 +580,29 @@ class Move extends Plan {
         let me_x = Math.round(me.x);
         let me_y = Math.round(me.y);
         while (me_x != x || me_y != y) {
+            if (deliveroo_graph.getNode(x,y).isWall() || deliveroo_graph.getNode(me_x,me_y).isWall()) {
+                this.log('stucked');
+                throw ['stucked'];
+            }
             if (this.stopped) throw ['stopped']; // if stopped then quit
-
             let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me_x][me_y], deliveroo_graph.grid[x][y]);
-
+            if (path.length === 0){
+                this.log('stucked');
+                throw ['stucked'];
+            }
             for (let index = 0; index < path.length; index++) {
                 if (this.stopped) throw ['stopped']; // if stopped then quit
 
                 let status = false;
                 let next_tile = path[index];
                 //evaluate if it is a up, down, left or right move
-                if (next_tile.x == me_x + 1 && next_tile.y == me_y) {
+                if (next_tile.x == me_x + 1 && next_tile.y == me_y && !deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
                     status = await client.move('right')
-                } else if (next_tile.x == me_x - 1 && next_tile.y == me_y) {
+                } else if (next_tile.x == me_x - 1 && next_tile.y == me_y && !deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
                     status = await client.move('left')
-                } else if (next_tile.x == me_x && next_tile.y == me_y + 1) {
+                } else if (next_tile.x == me_x && next_tile.y == me_y + 1 && !deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
                     status = await client.move('up')
-                } else if (next_tile.x == me_x && next_tile.y == me_y - 1) {
+                } else if (next_tile.x == me_x && next_tile.y == me_y - 1&& !deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
                     status = await client.move('down')
                 }
                 if (status) {
