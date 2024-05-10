@@ -25,11 +25,13 @@ intentions implementations:
     + random move: sceglie tile camminabile a distanza 1 e ci va (con astar ma l'è stesso)
 
 TODO NOW
-- migliorare n_parcel
+- gestione parcelle presenti:
+    1 - settare un timer ogni PARCEL_DECADING_INTERVAL che decrementa gli score delle parcelle salvate
+    2 - quando dovrei vedere la parcella, controllare che sia ancora la
 - agent sensing
     -> finire put down
 - usare MaxHeap (priorità più alta data al)
-- metodo per valutare quanti pacchetti ho in testa(se mi scadono penso di averne più del previsto)
+- valutare metrica per evitare parcelle inutili (mi calcolo se riesco a consegnarla prima di prenderla su, magari non ha senso prenderla)
 fine
 
 

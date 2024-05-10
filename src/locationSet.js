@@ -4,7 +4,7 @@ class LocationsSet{
     }
 
     _hash(x,y){
-        return ((x.toString()+ y.toString()).hashCode())
+        return ((x.toString()+"-"+y.toString()))
     }
 
     add(x,y){
@@ -18,6 +18,15 @@ class LocationsSet{
     delete(x,y){
         const hash = this._hash(x,y)
         this.parcel_locations[hash] = false
+    }
+    keys(){
+        return Object.keys(this.parcel_locations)
+    }
+    values(){
+        return Object.values(this.parcel_locations)
+    }
+    items(){
+        return Object.entries(this.parcel_locations)
     }
 }
 

@@ -102,21 +102,39 @@ const client = local
 // const client = remote
 
 
+// TODO evaluation of decaying parcels & data for timers to be checked
+let OBSERVATION_DISTANCE;
+let CLOCK;
+let MOVEMENT_DURATION;
+let PARCEL_DECADING_INTERVAL;
+client.onConfig(config => {
+    console.log("config", config)
+    OBSERVATION_DISTANCE = config.PARCELS_OBSERVATION_DISTANCE
+    CLOCK = config.CLOCK
+    MOVEMENT_DURATION = config.MOVEMENT_DURATION
+    PARCEL_DECADING_INTERVAL = config.PARCEL_DECADING_INTERVAL
+})
+
 let deliveroo_map;
 let delivery_tiles;
 let deliveroo_graph;
 let MAX_WIDTH;
 let MAX_HEIGHT;
+let parcel_locations;
+
 client.onMap((width, height, tiles) => {
 
     MAX_WIDTH = width - 1;
     MAX_HEIGHT = height - 1;
 
     deliveroo_map = [];
+    parcel_locations = [];
     for (let i = 0; i < width; i++) {
         deliveroo_map[i] = [];
+        parcel_locations[i] = [];
         for (let j = 0; j < height; j++) {
             deliveroo_map[i][j] = 0;
+            parcel_locations[i][j] = 0;
         }
     }
 
@@ -134,6 +152,11 @@ client.onMap((width, height, tiles) => {
     // deliveroo_graph.setWall(5, 0);
     // deliveroo_graph.setWall(6, 9);
 
+})
+
+
+client.onAgentsSensing(async (agents) => {
+    console.log("agents", agents)
 })
 
 function distance({ x: x1, y: y1 }, { x: x2, y: y2 }) {
@@ -159,14 +182,19 @@ client.onYou(({ id, name, x, y, score }) => {
 })
 const parcels = new Map();
 // let parcel_locations = []
-let parcel_locations = new LocationsSet()
 client.onParcelsSensing(async (perceived_parcels) => {
-    let counter = 0;
+    let counter = 0
+    // TODO check this one!!! Is it a good assumption?
+    // assumption : If I do not see a parcel, it is most likely been taken by someone else
+    // for (let i=0;i< MAX_WIDTH; i++){
+    //     for(let j=0;j<MAX_HEIGHT;j++){
+    //         parcel_locations[i][j] = 0
+    //     }
+    // }
     for (const p of perceived_parcels) {
         parcels.set(p.id, p)
-        // parcel_locations.push([p.x, p.y])
         if (!p.carriedBy) {
-            parcel_locations.add(p.x, p.y)
+            parcel_locations[p.x][p.y] = 1
         }
         else {
             if (p.carriedBy === me.id) {
@@ -175,10 +203,8 @@ client.onParcelsSensing(async (perceived_parcels) => {
         }
     }
     n_parcels = counter;
-    console.log("Im carrying ", n_parcels, " parcels")
+
 })
-
-
 
 
 /**
@@ -292,7 +318,7 @@ class IntentionRevision {
                     let id = intention.predicate[3]
                     let p = parcels.get(id)
 
-                    if (p && p.carriedBy) {
+                    if (p && p.carriedBy || parcel_locations[p.x][p.y] == 0) {
                         console.log('Skipping intention because no more valid', intention.predicate)
                         continue;
                     }
@@ -491,7 +517,7 @@ class GoPickUp extends Plan {
         let status = await client.pickup()
         // parcel_locations = parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
         if (status) {
-            parcel_locations.delete(x, y)
+            parcel_locations[x][y] = 0
             console.log("provo a tirar su con PICK UP")
             if (this.stopped) throw ['stopped']; // if stopped then quit
             return true;
@@ -573,12 +599,12 @@ class Move extends Plan {
                     if (this.stopped) throw ['stopped']; // if stopped then quit
                     // if I pass on a parcel, I pick it up and remove it from belief set
                     // if (parcel_locations.some(arr => arr[0] === me.x && arr[1] === me.y)){
-                    if (parcel_locations.has(me_x, me_y)) {
+                    if (parcel_locations[me_x][me_y] == 1) {
                         console.log("provo a tirar su con MOVE")
                         let status = await client.pickup()
                         // parcel_locations = parcel_locations.filter(item => !(item[0] !== me.x && item[1] !== me.y))
                         if (status) {
-                            parcel_locations.delete(me_x, me_y)
+                            parcel_locations[me_x][me_y] = 0
                         }
                     }
                 }
