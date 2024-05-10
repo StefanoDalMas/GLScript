@@ -254,6 +254,20 @@
         return graphString.join("\n");
     };
 
+    Graph.prototype.setWall = function (x, y) {
+        this.grid[x][y].weight = 0;
+        return true;
+    };
+
+    Graph.prototype.setWalkable = function (x, y) {
+        this.grid[x][y].weight = 1;
+        return true;
+    };
+
+    Graph.prototype.getNode = function (x,y){
+        return this.grid[x][y];
+    }
+
     function GridNode(x, y, weight) {
         this.x = x;
         this.y = y;

@@ -25,6 +25,7 @@ intentions implementations:
     + random move: sceglie tile camminabile a distanza 1 e ci va (con astar ma l'è stesso)
 
 TODO NOW
+- migliorare n_parcel
 - agent sensing
     -> finire put down
 - usare MaxHeap (priorità più alta data al)

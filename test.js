@@ -51,9 +51,20 @@ String.prototype.hashCode = function () {
 };
 
 
-const customSet = new ParcelLocationsSet();
-customSet.add(2, 3);
-console.log(customSet.has(2, 3));
-console.log(customSet.has(2, 4));
-customSet.delete(2, 3);
-console.log(customSet.has(2, 3));
+// const customSet = new ParcelLocationsSet();
+// customSet.add(2, 3);
+// console.log(customSet.has(2, 3));
+// console.log(customSet.has(2, 4));
+// customSet.delete(2, 3);
+// console.log(customSet.has(2, 3));
+
+
+//create a matrix 4 x 4 with 1s and 0s
+let matrix = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => 1));
+console.log(matrix);
+
+let graph = new Graph(matrix);
+console.log(graph.grid);
+console.log("PRONTIIII")
+graph.setWeight(0,1,0)
+console.log(graph.grid);
