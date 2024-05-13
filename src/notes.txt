@@ -31,7 +31,6 @@ TODO NOW
 - usare MaxHeap (priorità più alta data al)
 - valutare metrica per evitare parcelle inutili (mi calcolo se riesco a consegnarla prima di prenderla su, magari non ha senso prenderla)
 fine
-- da sistemare l'ingeresso nella parte in cui si sceglie dove andare a  consegnare -> se non ci sono strade disponibili vogliamo fare random move e non continuare a provare
 
 
 Funzione di priorità:

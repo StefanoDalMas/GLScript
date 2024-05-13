@@ -97,6 +97,7 @@ class Intention {
 
 let n_parcels = 0
 const MAX_QUEUE = 3
+let go_put_down_tries = 0
 
 const client = local
 // const client = remote
@@ -158,7 +159,6 @@ client.onMap((width, height, tiles) => {
 let agentsLocations = new Map(); //agent.id -> (old_location, new_location)
 
 client.onAgentsSensing(async (agents) => {
-    console.log("agents", agents)
     let agent_x = Math.round(me.x);
     let agent_y = Math.round(me.y);
 //     //for each agent that I see, set the old location and the new location
@@ -311,6 +311,7 @@ class IntentionRevision {
 
             // Consumes intention_queue if not empty
             console.log("dimensione:", this.#intention_queue.length)
+            console.log(go_put_down_tries)
             if (this.intention_queue.length > 0) {
                 var result = "";
                 for (var i = 0; i < this.intention_queue.length; i++) {
@@ -322,7 +323,9 @@ class IntentionRevision {
 
                 console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
 
-                if (n_parcels > MAX_PICKED_PARCELS && me.x != undefined && me.y != undefined) {
+                if (n_parcels == MAX_PICKED_PARCELS && me.x != undefined && me.y != undefined && go_put_down_tries < 10) {
+
+                    go_put_down_tries += 1;
 
                     /**
                      * Options filtering (trovo la tile di consegnap più vicina)
@@ -371,7 +374,10 @@ class IntentionRevision {
                 // Remove from the queue
                 this.intention_queue.shift();
 
-            } else if (n_parcels) {
+            } else if (n_parcels && go_put_down_tries < 10) {
+
+                go_put_down_tries += 1;
+
                 /**
                  * Options filtering (trovo la tile di consegnap più vicina)
                  */
@@ -393,6 +399,10 @@ class IntentionRevision {
                     this.push(['go_put_down', best_option[0], best_option[1]])
                 }
             } else {
+                if (go_put_down_tries >= 10){
+                    go_put_down_tries = 0;
+                }
+                console.log("pushing random")
                 this.push(['random_move'])
             }
 
@@ -574,6 +584,7 @@ class GoPutDown extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await client.putdown();
         if (status) {
+            go_put_down_tries = 0
             return true;
         }
         return false;
@@ -669,8 +680,8 @@ class RandomMove extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         console.log("entro random")
         if (me.x != undefined && me.y != undefined) {
-            console.log("entro if", me.x)
-            console.log("entro if", me.y)
+            // console.log("entro if", me.x)
+            // console.log("entro if", me.y)
             //from my position, choose an adjacent tile in deliveroo_map
             let possible_moves = []
             //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
@@ -680,28 +691,24 @@ class RandomMove extends Plan {
             if (me_x != MAX_WIDTH && !deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
                 possible_moves.push({ x: me_x + 1, y: me_y })
             }
-            console.log("entro random1", possible_moves)
             if (me_x != 0 && !deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
                 possible_moves.push({ x: me_x - 1, y: me_y })
             }
-            console.log("entro random2", possible_moves)
             if (me_y != MAX_HEIGHT && !deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
                 possible_moves.push({ x: me_x, y: me_y + 1 })
             }
-            console.log("entro random3", possible_moves)
             if (me_y != 0 && !deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
                 possible_moves.push({ x: me_x, y: me_y - 1 })
             }
-            console.log("entro random4", possible_moves)
 
             if (possible_moves.length === 0) {
                 this.log('stucked');
                 throw 'stucked';
             }
 
-            console.log("possible moves", possible_moves)
+            // console.log("possible moves", possible_moves)
             let new_tile = possible_moves[Math.floor(Math.random() * possible_moves.length)]
-            console.log("new tile", new_tile)
+            // console.log("new tile", new_tile)
 
             if (this.stopped) throw ['stopped']; // if stopped then quit
 
