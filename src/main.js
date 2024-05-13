@@ -180,7 +180,9 @@ client.onAgentsSensing(async (agents) => {
 // Better? idea: I only set wall to the agents that I actually see
     for(let i=0;i<MAX_WIDTH;i++){
         for(let j=0;j<MAX_HEIGHT;j++){
-            deliveroo_graph.setWalkable(i,j);
+            if(deliveroo_map[i][j]==1){
+                deliveroo_graph.setWalkable(i,j);
+            }
         }
     }
     agents.forEach(agent => {
@@ -382,12 +384,14 @@ class IntentionRevision {
                     // let current_d = distance({ x, y }, {me_x, me_y})
                     let current_d = distance({ x, y }, me)
                     // console.log("option is: ", option, " and distance is: ", current_d)
-                    if (current_d < nearest) {
+                    if (current_d > 0 && current_d < nearest) {
                         best_option = option
                         nearest = current_d
                     }
                 }
-                this.push(['go_put_down', best_option[0], best_option[1]])
+                if(best_option){
+                    this.push(['go_put_down', best_option[0], best_option[1]])
+                }
             } else {
                 this.push(['random_move'])
             }
@@ -592,14 +596,14 @@ class Move extends Plan {
         let me_y = Math.round(me.y);
         while (me_x != x || me_y != y) {
             if (deliveroo_graph.getNode(x,y).isWall() || deliveroo_graph.getNode(me_x,me_y).isWall()) {
-                this.log('stucked');
-                throw ['stucked'];
+                this.log('stucked, walking to wall');
+                throw ['stucked', 'walking to wall'];
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
             let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me_x][me_y], deliveroo_graph.grid[x][y]);
             if (path.length === 0){
-                this.log('stucked');
-                throw ['stucked'];
+                this.log('stucked, no path foound');
+                throw ['stucked', 'no path foound'];
             }
             for (let index = 0; index < path.length; index++) {
                 if (this.stopped) throw ['stopped']; // if stopped then quit
@@ -622,8 +626,8 @@ class Move extends Plan {
                     me.y = Math.round(status.y);
                     me_y = me.y;
                 } else {
-                    this.log('stucked');
-                    throw ['stucked'];
+                    this.log('stucked, movement fail');
+                    throw ['stucked', 'movement fail'];
                 }
 
                 // if (this.stopped) throw ['stopped']; // if stopped then quit
