@@ -98,6 +98,7 @@ class Intention {
 let n_parcels = 0
 const MAX_QUEUE = 3
 let go_put_down_tries = 0
+let put_down_in_queue = false
 
 const client = local
 // const client = remote
@@ -323,7 +324,7 @@ class IntentionRevision {
 
                 console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
 
-                if (n_parcels == MAX_PICKED_PARCELS && me.x != undefined && me.y != undefined && go_put_down_tries < 10) {
+                if (n_parcels == MAX_PICKED_PARCELS && !put_down_in_queue && me.x != undefined && me.y != undefined && go_put_down_tries < 10) {
 
                     go_put_down_tries += 1;
 
@@ -342,7 +343,8 @@ class IntentionRevision {
                         }
                     }
                     if (best_option) {
-                        this.push(['go_put_down', best_option[0], best_option[1]])
+                        this.push(['go_put_down', best_option[0], best_option[1]]);
+                        put_down_in_queue = true;
                     }
                 }
 
@@ -396,7 +398,8 @@ class IntentionRevision {
                     }
                 }
                 if(best_option){
-                    this.push(['go_put_down', best_option[0], best_option[1]])
+                    this.push(['go_put_down', best_option[0], best_option[1]]);
+                    put_down_in_queue = true;
                 }
             } else {
                 if (go_put_down_tries >= 10){
@@ -579,6 +582,7 @@ class GoPutDown extends Plan {
     }
 
     async execute(go_put_down, x, y, id) {
+        put_down_in_queue = false;
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
