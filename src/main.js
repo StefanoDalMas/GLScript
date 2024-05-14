@@ -96,12 +96,12 @@ class Intention {
 
 
 let n_parcels = 0
-const MAX_QUEUE = 3
+const MAX_QUEUE = 2
 let go_put_down_tries = 0
 let put_down_in_queue = false
 
-const client = local
-// const client = remote
+// const client = local
+const client = remote
 
 
 // TODO evaluation of decaying parcels & data for timers to be checked
@@ -255,7 +255,7 @@ client.onParcelsSensing(parcels => {
     const options = []
     for (const parcel of parcels.values())
         if (!parcel.carriedBy)
-            options.push(['go_pick_up', parcel.x, parcel.y, parcel.id]);
+            options.push(['go_pick_up', Math.round(parcel.x), Math.round(parcel.y), parcel.id]);
     // myAgent.push( [ 'go_pick_up', parcel.x, parcel.y, parcel.id ] )
 
     /**
