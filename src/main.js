@@ -3,6 +3,21 @@ import { remote, local, MAX_PICKED_PARCELS } from "../config/config.js"
 import { astar, Graph } from "./astar.js"
 import LocationsSet from "./locationSet.js"
 
+
+function findBestTile(tiles_to_check) {
+    let best_option;
+    let nearest = Number.MAX_VALUE;
+    for (const option of tiles_to_check) {
+        let [x, y] = option;
+        let current_d = distance({ x, y }, me)
+        // console.log("option is: ", option, " and distance is: ", current_d))
+        if (current_d > 0 && current_d < nearest) {
+            best_option = option
+            nearest = current_d
+        }
+    }
+    return best_option;
+}
 /**
  * Intention
  */
@@ -100,8 +115,8 @@ const MAX_QUEUE = 2
 let go_put_down_tries = 0
 let put_down_in_queue = false
 
-// const client = local
-const client = remote
+const client = local
+// const client = remote
 
 
 // TODO evaluation of decaying parcels & data for timers to be checked
@@ -119,12 +134,15 @@ client.onConfig(config => {
 
 let deliveroo_map;
 let delivery_tiles;
+let spawning_tiles;
+let all_spawning = false;
 let deliveroo_graph;
 let MAX_WIDTH;
 let MAX_HEIGHT;
 let parcel_locations;
 
 client.onMap((width, height, tiles) => {
+    console.log(tiles);
 
     MAX_WIDTH = width - 1;
     MAX_HEIGHT = height - 1;
@@ -141,12 +159,21 @@ client.onMap((width, height, tiles) => {
     }
 
     delivery_tiles = [];
+    spawning_tiles = [];
     tiles.forEach(tile => {
         deliveroo_map[tile.x][tile.y] = 1;
         if (tile.delivery) {
             delivery_tiles.push([tile.x, tile.y]);
         }
+        if (tile.parcelSpawner) {
+            spawning_tiles.push([tile.x, tile.y]);
+        }
     });
+
+    if (spawning_tiles.length === tiles.length - delivery_tiles.length) {
+        all_spawning = true;
+        console.log("aSDKJFHSADLKJFHASDLKJFHALSKJDHFLAKJSDHF", all_spawning)
+    }
 
     deliveroo_graph = new Graph(deliveroo_map);
     // deliveroo_graph.setWall(1, 0);
@@ -162,27 +189,27 @@ let agentsLocations = new Map(); //agent.id -> (old_location, new_location)
 client.onAgentsSensing(async (agents) => {
     let agent_x = Math.round(me.x);
     let agent_y = Math.round(me.y);
-//     //for each agent that I see, set the old location and the new location
-//     // if it is the first time I see the agent, the old location is the same as the new location
-//     agents.forEach(agent => {
-//         let agent_id = agent.id;
-//         let old_location = agentsLocations.get(agent_id) ? agentsLocations.get(agent_id)[1] : { x: agent_x, y: agent_y };
-//         let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
-//         agentsLocations.set(agent_id, [old_location, new_location]);
-//     })
-//     //for clarity, the 2 for loops are separated
-//     agentsLocations.forEach((value, key) => {
-//         console.log("value is      ", value);
-//         let old_location = value[0];
-//         let new_location = value[1];
-//         deliveroo_graph.setWalkable(old_location.x, old_location.y);
-//         deliveroo_graph.setWall(new_location.x, new_location.y);
-// })
-// Better? idea: I only set wall to the agents that I actually see
-    for(let i=0;i<MAX_WIDTH;i++){
-        for(let j=0;j<MAX_HEIGHT;j++){
-            if(deliveroo_map[i][j]==1){
-                deliveroo_graph.setWalkable(i,j);
+    //     //for each agent that I see, set the old location and the new location
+    //     // if it is the first time I see the agent, the old location is the same as the new location
+    //     agents.forEach(agent => {
+    //         let agent_id = agent.id;
+    //         let old_location = agentsLocations.get(agent_id) ? agentsLocations.get(agent_id)[1] : { x: agent_x, y: agent_y };
+    //         let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
+    //         agentsLocations.set(agent_id, [old_location, new_location]);
+    //     })
+    //     //for clarity, the 2 for loops are separated
+    //     agentsLocations.forEach((value, key) => {
+    //         console.log("value is      ", value);
+    //         let old_location = value[0];
+    //         let new_location = value[1];
+    //         deliveroo_graph.setWalkable(old_location.x, old_location.y);
+    //         deliveroo_graph.setWall(new_location.x, new_location.y);
+    // })
+    // Better? idea: I only set wall to the agents that I actually see
+    for (let i = 0; i < MAX_WIDTH; i++) {
+        for (let j = 0; j < MAX_HEIGHT; j++) {
+            if (deliveroo_map[i][j] == 1) {
+                deliveroo_graph.setWalkable(i, j);
             }
         }
     }
@@ -227,7 +254,7 @@ client.onParcelsSensing(async (perceived_parcels) => {
     // }
     for (const p of perceived_parcels) {
         parcels.set(p.id, p)
-        if (!p.carriedBy) {
+        if (!p.carriedBy && p.reward > 0) {
             parcel_locations[p.x][p.y] = 1
         }
         else {
@@ -331,17 +358,8 @@ class IntentionRevision {
                     /**
                      * Options filtering (trovo la tile di consegnap più vicina)
                      */
-                    let best_option;
-                    let nearest = Number.MAX_VALUE;
-                    for (const option of delivery_tiles) {
-                        let [x, y] = option;
-                        let current_d = distance({ x, y }, me)
-                        // console.log("option is: ", option, " and distance is: ", current_d))
-                        if (current_d > 0 && current_d < nearest) {
-                            best_option = option
-                            nearest = current_d
-                        }
-                    }
+                    let best_option = findBestTile(delivery_tiles);
+
                     if (best_option) {
                         this.push(['go_put_down', best_option[0], best_option[1]]);
                         put_down_in_queue = true;
@@ -383,26 +401,13 @@ class IntentionRevision {
                 /**
                  * Options filtering (trovo la tile di consegnap più vicina)
                  */
-                let best_option;
-                let nearest = Number.MAX_VALUE;
-                for (const option of delivery_tiles) {
-                    let [x, y] = option;
-                    // let me_x = me.x;
-                    // let me_y = me.y;
-                    // let current_d = distance({ x, y }, {me_x, me_y})
-                    let current_d = distance({ x, y }, me)
-                    // console.log("option is: ", option, " and distance is: ", current_d)
-                    if (current_d > 0 && current_d < nearest) {
-                        best_option = option
-                        nearest = current_d
-                    }
-                }
-                if(best_option){
+                let best_option = findBestTile(delivery_tiles);
+                if (best_option) {
                     this.push(['go_put_down', best_option[0], best_option[1]]);
                     put_down_in_queue = true;
                 }
             } else {
-                if (go_put_down_tries >= 10){
+                if (go_put_down_tries >= 10) {
                     go_put_down_tries = 0;
                 }
                 console.log("pushing random")
@@ -610,13 +615,13 @@ class Move extends Plan {
         let me_x = Math.round(me.x);
         let me_y = Math.round(me.y);
         while (me_x != x || me_y != y) {
-            if (deliveroo_graph.getNode(x,y).isWall() || deliveroo_graph.getNode(me_x,me_y).isWall()) {
+            if (deliveroo_graph.getNode(x, y).isWall() || deliveroo_graph.getNode(me_x, me_y).isWall()) {
                 this.log('stucked, walking to wall');
                 throw ['stucked', 'walking to wall'];
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
             let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me_x][me_y], deliveroo_graph.grid[x][y]);
-            if (path.length === 0){
+            if (path.length === 0) {
                 this.log('stucked, no path foound');
                 throw ['stucked', 'no path foound'];
             }
@@ -632,7 +637,7 @@ class Move extends Plan {
                     status = await client.move('left')
                 } else if (next_tile.x == me_x && next_tile.y == me_y + 1 && !deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
                     status = await client.move('up')
-                } else if (next_tile.x == me_x && next_tile.y == me_y - 1&& !deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
+                } else if (next_tile.x == me_x && next_tile.y == me_y - 1 && !deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
                     status = await client.move('down')
                 }
                 if (status) {
@@ -687,37 +692,56 @@ class RandomMove extends Plan {
             // console.log("entro if", me.x)
             // console.log("entro if", me.y)
             //from my position, choose an adjacent tile in deliveroo_map
-            let possible_moves = []
             //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
 
             let me_x = Math.round(me.x);
             let me_y = Math.round(me.y);
-            if (me_x != MAX_WIDTH && !deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
-                possible_moves.push({ x: me_x + 1, y: me_y })
-            }
-            if (me_x != 0 && !deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
-                possible_moves.push({ x: me_x - 1, y: me_y })
-            }
-            if (me_y != MAX_HEIGHT && !deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
-                possible_moves.push({ x: me_x, y: me_y + 1 })
-            }
-            if (me_y != 0 && !deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
-                possible_moves.push({ x: me_x, y: me_y - 1 })
-            }
+            let neighbours = deliveroo_graph.neighbors(deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall())
+            //not using this one because of check me_x and me_y
 
-            if (possible_moves.length === 0) {
+            if (neighbours.length === 0) {
                 this.log('stucked');
-                throw 'stucked';
+                throw ['stucked', ' no possible moves'];
             }
 
-            // console.log("possible moves", possible_moves)
-            let new_tile = possible_moves[Math.floor(Math.random() * possible_moves.length)]
-            // console.log("new tile", new_tile)
-
+            let objective_tile;
+            let path_length = 0;
+            //if all spawn, go to closest delivery tile, else closest spawn tile
+            let best_option = all_spawning ? findBestTile(delivery_tiles) : findBestTile(spawning_tiles);
+            let new_tile;
+            if (best_option) {
+                let random = Math.random();
+                let max_distance = 10;
+                let max_probability = 0.7;
+                let probability = 0.0;
+                let path = astar.search(deliveroo_graph, deliveroo_graph.grid[me_x][me_y], deliveroo_graph.grid[best_option[0]][best_option[1]]);
+                if (path.length > 0) {
+                    objective_tile = path[0];
+                    path_length = path.length;
+                    probability = Math.min(1, max_probability * ((path_length - 1) / (max_distance - 1)))
+                    if (random < probability && deliveroo_graph) {
+                        // console.log("objective tile", objective_tile.x, objective_tile.y)
+                        // let tile = deliveroo_graph.grid[objective_tile.x][objective_tile.y]
+                        new_tile = objective_tile
+                    } else {
+                        let filtered_neighbours = neighbours.filter(node => node.x !== objective_tile.x || node.y !== objective_tile.y)
+                        if (filtered_neighbours.length > 0) {
+                            new_tile = filtered_neighbours[Math.floor(Math.random() * filtered_neighbours.length)]
+                        }
+                        else {
+                            throw ['stucked', ' cant get closer to delivery'];
+                        }
+                    }
+                }
+                //extra check if path becomes unreachable while calcualting astar
+                new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
+            } else {
+                new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
+            }
             if (this.stopped) throw ['stopped']; // if stopped then quit
-
             await this.subIntention(['go_to', new_tile.x, new_tile.y]);
             return true;
+
         } else {
             return false;
         }
