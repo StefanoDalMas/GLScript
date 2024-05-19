@@ -24,7 +24,7 @@ class IntentionRevision {
 
             // Consumes intention_queue if not empty
             console.log("dimensione:", this.#intention_queue.length)
-            console.log(global.go_put_down_tries)
+            console.log("go_put_down_tries = ", global.go_put_down_tries)
             if (this.intention_queue.length > 0) {
                 var result = "";
                 for (var i = 0; i < this.intention_queue.length; i++) {

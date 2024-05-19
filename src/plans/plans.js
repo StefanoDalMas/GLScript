@@ -20,15 +20,15 @@ class Plan {
     /**
      * #parent refers to caller
      */
-    #parent;
-
+    parent;
+    
     constructor(parent) {
-        this.#parent = parent;
+        this.parent = parent;
     }
 
     log(...args) {
-        if (this.#parent && this.#parent.log)
-            this.#parent.log('\t', ...args)
+        if (this.parent && this.parent.log)
+            this.parent.log('\t', ...args)
         else
             console.log(...args)
     }
@@ -90,6 +90,16 @@ class GoTo extends Plan {
                 throw ['stucked', 'no path foound'];
             }
             for (let index = 0; index < path.length; index++) {
+                // TODO: controllo da fare per skippare la go put down se non ho niente in testa
+                // il valore che si tiene in testa va calcolato con formula, me.score è il punteggio totale T.T
+                // if (this.parent instanceof GoPutDown) {
+                //     if (global.me.score == 0){ // SBAGLIATO!
+                //         console.log(global.me.score)
+                //         this.stop()
+                //         if (this.stopped) throw ['stopped', '0 score']
+                //     }
+                // }
+
                 if (this.stopped) throw ['stopped']; // if stopped then quit
 
                 let status = false;
@@ -215,9 +225,10 @@ class RandomMove extends Plan {
                             throw ['stucked', ' cant get closer to delivery'];
                         }
                     }
+                } else {
+                    //extra check if path becomes unreachable while calcualting astar
+                    new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
                 }
-                //extra check if path becomes unreachable while calcualting astar
-                new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
             } else {
                 new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
             }
