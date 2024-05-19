@@ -30,6 +30,7 @@ TODO NOW
     2 - quando dovrei vedere la parcella, controllare che sia ancora la
 - usare MaxHeap (priorità più alta data al)
 - valutare metrica per evitare parcelle inutili (mi calcolo se riesco a consegnarla prima di prenderla su, magari non ha senso prenderla)
+- quando sto consegnando e la parcella mi scade esco dal Plan perchè non ha senso andare fino in fondo, meglio fare random move
 fine
 
 Funzione di priorità:

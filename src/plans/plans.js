@@ -177,11 +177,6 @@ class RandomMove extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         console.log("entro random")
         if (global.me.x != undefined && global.me.y != undefined) {
-            // console.log("entro if", global.me.x)
-            // console.log("entro if", global.me.y)
-            //from my position, choose an adjacent tile in deliveroo_map
-            //see all the adjacent tiles that have value 1 in deliveroo_map and choose one randomly
-
             let me_x = Math.round(global.me.x);
             let me_y = Math.round(global.me.y);
             let neighbours = global.deliveroo_graph.neighbors(global.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall())

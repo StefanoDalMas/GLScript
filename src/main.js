@@ -3,18 +3,6 @@ import { distance } from "./tools/distance.js"
 import { IntentionRevisionQueue } from "./intentions/intentionRevision.js";
 import { global } from "./tools/globals.js"
 
-/**
- * Intention
- */
-
-
-
-
-
-
-
-
-
 
 
 // TODO evaluation of decaying parcels & data for timers to be checked
@@ -206,5 +194,5 @@ const myAgent = new IntentionRevisionQueue();
 myAgent.loop();
 
 
-
-export { myAgent, deliveroo_map}
+//is the export needed now?
+export { myAgent}
