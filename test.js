@@ -18,7 +18,7 @@ import { astar, Graph } from './src/astar.js';
 
 class ParcelLocationsSet {
     constructor() {
-        this.parcel_locations = {}
+        this.global.parcel_locations = {}
     }
 
     _hash(x, y) {
@@ -27,15 +27,15 @@ class ParcelLocationsSet {
 
     add(x, y) {
         const hash = this._hash(x, y)
-        this.parcel_locations[hash] = true;
+        this.global.parcel_locations[hash] = true;
     }
     has(x, y) {
         const hash = this._hash(x, y)
-        return this.parcel_locations[hash] === true;
+        return this.global.parcel_locations[hash] === true;
     }
     delete(x, y) {
         const hash = this._hash(x, y)
-        this.parcel_locations[hash] = false;
+        this.global.parcel_locations[hash] = false;
     }
 }
 
@@ -66,5 +66,5 @@ console.log(matrix);
 let graph = new Graph(matrix);
 console.log(graph.grid);
 console.log("PRONTIIII")
-graph.setWeight(0,1,0)
+graph.setWeight(0, 1, 0)
 console.log(graph.grid);

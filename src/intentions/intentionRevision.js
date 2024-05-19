@@ -1,11 +1,7 @@
 import { Intention } from './intention.js';
 import { MAX_PICKED_PARCELS } from '../../config/config.js';
-import { me, n_parcels, delivery_tiles, parcels, } from '../main.js';
 import { findBestTile } from '../tools/findBestTile.js';
-
-
-let put_down_in_queue = false
-let go_put_down_tries = 0
+import { global } from '../tools/globals.js';
 
 
 class IntentionRevision {
@@ -28,7 +24,7 @@ class IntentionRevision {
 
             // Consumes intention_queue if not empty
             console.log("dimensione:", this.#intention_queue.length)
-            console.log(go_put_down_tries)
+            console.log(global.go_put_down_tries)
             if (this.intention_queue.length > 0) {
                 var result = "";
                 for (var i = 0; i < this.intention_queue.length; i++) {
@@ -40,18 +36,18 @@ class IntentionRevision {
 
                 console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
 
-                if (n_parcels == MAX_PICKED_PARCELS && !put_down_in_queue && me.x != undefined && me.y != undefined && go_put_down_tries < 10) {
+                if (global.n_parcels == MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x != undefined && global.me.y != undefined && global.go_put_down_tries < 10) {
 
-                    go_put_down_tries += 1;
+                    global.go_put_down_tries += 1;
 
                     /**
                      * Options filtering (trovo la tile di consegnap più vicina)
                      */
-                    let best_option = findBestTile(delivery_tiles);
+                    let best_option = findBestTile(global.delivery_tiles);
 
                     if (best_option) {
                         this.push(['go_put_down', best_option[0], best_option[1]]);
-                        put_down_in_queue = true;
+                        global.put_down_in_queue = true;
                     }
                 }
 
@@ -62,9 +58,9 @@ class IntentionRevision {
                 // Is queued intention still valid? Do I still want to achieve it?
                 if (intention[0] == 'go_pick_up') {
                     let id = intention.predicate[3]
-                    let p = parcels.get(id)
+                    let p = global.parcels.get(id)
 
-                    if (p && p.carriedBy || parcel_locations[p.x][p.y] == 0) {
+                    if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0) {
                         console.log('Skipping intention because no more valid', intention.predicate)
                         continue;
                     }
@@ -80,21 +76,21 @@ class IntentionRevision {
                 // Remove from the queue
                 this.intention_queue.shift();
 
-            } else if (n_parcels && go_put_down_tries < 10) {
+            } else if (global.n_parcels && global.go_put_down_tries < 10) {
 
-                go_put_down_tries += 1;
+                global.go_put_down_tries += 1;
 
                 /**
                  * Options filtering (trovo la tile di consegnap più vicina)
                  */
-                let best_option = findBestTile(delivery_tiles);
+                let best_option = findBestTile(global.delivery_tiles);
                 if (best_option) {
                     this.push(['go_put_down', best_option[0], best_option[1]]);
-                    put_down_in_queue = true;
+                    global.put_down_in_queue = true;
                 }
             } else {
-                if (go_put_down_tries >= 10) {
-                    go_put_down_tries = 0;
+                if (global.go_put_down_tries >= 10) {
+                    global.go_put_down_tries = 0;
                 }
                 console.log("pushing random")
                 this.push(['random_move'])
@@ -189,4 +185,4 @@ class IntentionRevisionRevise extends IntentionRevision {
 
 
 
-export { IntentionRevisionQueue, IntentionRevisionStack, IntentionRevisionReplace, IntentionRevision, go_put_down_tries, put_down_in_queue}
+export { IntentionRevisionQueue, IntentionRevisionStack, IntentionRevisionReplace, IntentionRevision }

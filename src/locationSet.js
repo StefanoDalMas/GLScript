@@ -1,32 +1,32 @@
-class LocationsSet{
-    constructor(){
-        this.parcel_locations = {}
+class LocationsSet {
+    constructor() {
+        this.global.parcel_locations = {}
     }
 
-    _hash(x,y){
-        return ((x.toString()+"-"+y.toString()))
+    _hash(x, y) {
+        return ((x.toString() + "-" + y.toString()))
     }
 
-    add(x,y){
-        const hash = this._hash(x,y)
-        this.parcel_locations[hash] = true
+    add(x, y) {
+        const hash = this._hash(x, y)
+        this.global.parcel_locations[hash] = true
     }
-    has(x,y){
-        const hash = this._hash(x,y)
-        return this.parcel_locations[hash] === true;
+    has(x, y) {
+        const hash = this._hash(x, y)
+        return this.global.parcel_locations[hash] === true;
     }
-    delete(x,y){
-        const hash = this._hash(x,y)
-        this.parcel_locations[hash] = false
+    delete(x, y) {
+        const hash = this._hash(x, y)
+        this.global.parcel_locations[hash] = false
     }
-    keys(){
-        return Object.keys(this.parcel_locations)
+    keys() {
+        return Object.keys(this.global.parcel_locations)
     }
-    values(){
-        return Object.values(this.parcel_locations)
+    values() {
+        return Object.values(this.global.parcel_locations)
     }
-    items(){
-        return Object.entries(this.parcel_locations)
+    items() {
+        return Object.entries(this.global.parcel_locations)
     }
 }
 

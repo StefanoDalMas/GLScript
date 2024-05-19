@@ -1,29 +1,31 @@
-import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
-import { remote, local, MAX_PICKED_PARCELS } from "../config/config.js"
-import { astar, Graph } from "./tools/astar.js"
-import LocationsSet from "./locationSet.js"
-import {distance} from "./tools/distance.js"
-import {findBestTile} from "./tools/findBestTile.js";
+import { Graph } from "./tools/astar.js"
+import { distance } from "./tools/distance.js"
+import { IntentionRevisionQueue } from "./intentions/intentionRevision.js";
+import { global } from "./tools/globals.js"
+import { setPlans } from "./plans/planLibrary.js";
 import { GoPickUp } from "./plans/goPickUp.js";
 import { GoPutDown } from "./plans/goPutDown.js";
 import { GoTo } from "./plans/goTo.js";
 import { RandomMove } from "./plans/randomMove.js";
-import { Plan } from "./plans/plan.js";
-import { Intention } from "./intentions/intention.js";
-import { IntentionRevision, IntentionRevisionQueue } from "./intentions/intentionRevision.js";
 
 /**
  * Intention
  */
+setPlans({
+    GoPickUp,
+    GoPutDown,
+    GoTo,
+    RandomMove
+});
 
 
 
-let n_parcels = 0
+
+
 const MAX_QUEUE = 2
 
 
-const client = local
-// const client = remote
+
 
 
 // TODO evaluation of decaying parcels & data for timers to be checked
@@ -31,7 +33,7 @@ let OBSERVATION_DISTANCE;
 let CLOCK;
 let MOVEMENT_DURATION;
 let PARCEL_DECADING_INTERVAL;
-client.onConfig(config => {
+global.client.onConfig(config => {
     console.log("config", config)
     OBSERVATION_DISTANCE = config.PARCELS_OBSERVATION_DISTANCE
     CLOCK = config.CLOCK
@@ -40,62 +42,55 @@ client.onConfig(config => {
 })
 
 let deliveroo_map;
-let delivery_tiles;
-let spawning_tiles;
-let all_spawning = false;
-let deliveroo_graph;
 let MAX_WIDTH;
 let MAX_HEIGHT;
-let parcel_locations;
 
-client.onMap((width, height, tiles) => {
+
+global.client.onMap((width, height, tiles) => {
     console.log(tiles);
 
     MAX_WIDTH = width - 1;
     MAX_HEIGHT = height - 1;
 
     deliveroo_map = [];
-    parcel_locations = [];
     for (let i = 0; i < width; i++) {
         deliveroo_map[i] = [];
-        parcel_locations[i] = [];
+        global.parcel_locations[i] = [];
         for (let j = 0; j < height; j++) {
             deliveroo_map[i][j] = 0;
-            parcel_locations[i][j] = 0;
+            global.parcel_locations[i][j] = 0;
         }
     }
 
-    delivery_tiles = [];
-    spawning_tiles = [];
     tiles.forEach(tile => {
         deliveroo_map[tile.x][tile.y] = 1;
         if (tile.delivery) {
-            delivery_tiles.push([tile.x, tile.y]);
+            global.delivery_tiles.push([tile.x, tile.y]);
         }
         if (tile.parcelSpawner) {
-            spawning_tiles.push([tile.x, tile.y]);
+            global.spawning_tiles.push([tile.x, tile.y]);
         }
     });
 
-    if (spawning_tiles.length === tiles.length - delivery_tiles.length) {
-        all_spawning = true;
-        console.log("aSDKJFHSADLKJFHASDLKJFHALSKJDHFLAKJSDHF", all_spawning)
+    if (global.spawning_tiles.length === tiles.length - global.delivery_tiles.length) {
+        global.all_spawning = true;
+        console.log("aSDKJFHSADLKJFHASDLKJFHALSKJDHFLAKJSDHF", global.all_spawning)
     }
 
-    deliveroo_graph = new Graph(deliveroo_map);
-    // deliveroo_graph.setWall(1, 0);
-    // deliveroo_graph.setWall(9, 3);
-    // deliveroo_graph.setWall(5, 0);
-    // deliveroo_graph.setWall(6, 9);
+    global.deliveroo_graph = new Graph(deliveroo_map);
+    // global.deliveroo_graph.setWall(1, 0);
+    // global.deliveroo_graph.setWall(9, 3);
+    // global.deliveroo_graph.setWall(5, 0);
+    // global.deliveroo_graph.setWall(6, 9);
 
 })
 
 
 let agentsLocations = new Map(); //agent.id -> (old_location, new_location)
 
-client.onAgentsSensing(async (agents) => {
-    let agent_x = Math.round(me.x);
-    let agent_y = Math.round(me.y);
+global.client.onAgentsSensing(async (agents) => {
+    let agent_x = Math.round(global.me.x);
+    let agent_y = Math.round(global.me.y);
     //     //for each agent that I see, set the old location and the new location
     //     // if it is the first time I see the agent, the old location is the same as the new location
     //     agents.forEach(agent => {
@@ -109,21 +104,21 @@ client.onAgentsSensing(async (agents) => {
     //         console.log("value is      ", value);
     //         let old_location = value[0];
     //         let new_location = value[1];
-    //         deliveroo_graph.setWalkable(old_location.x, old_location.y);
-    //         deliveroo_graph.setWall(new_location.x, new_location.y);
+    //         global.deliveroo_graph.setWalkable(old_location.x, old_location.y);
+    //         global.deliveroo_graph.setWall(new_location.x, new_location.y);
     // })
     // Better? idea: I only set wall to the agents that I actually see
     for (let i = 0; i < MAX_WIDTH; i++) {
         for (let j = 0; j < MAX_HEIGHT; j++) {
             if (deliveroo_map[i][j] == 1) {
-                deliveroo_graph.setWalkable(i, j);
+                global.deliveroo_graph.setWalkable(i, j);
             }
         }
     }
     agents.forEach(agent => {
         let agent_id = agent.id;
         let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
-        deliveroo_graph.setWall(new_location.x, new_location.y);
+        global.deliveroo_graph.setWall(new_location.x, new_location.y);
     })
 })
 
@@ -132,37 +127,36 @@ client.onAgentsSensing(async (agents) => {
 /**
  * Beliefset revision function
  */
-const me = {};
-client.onYou(({ id, name, x, y, score }) => {
-    me.id = id
-    me.name = name
-    me.x = Math.round(x)
-    me.y = Math.round(y)
-    me.score = score
+global.client.onYou(({ id, name, x, y, score }) => {
+    global.me.id = id
+    global.me.name = name
+    global.me.x = Math.round(x)
+    global.me.y = Math.round(y)
+    global.me.score = score
 })
-const parcels = new Map();
-// let parcel_locations = []
-client.onParcelsSensing(async (perceived_parcels) => {
+
+
+global.client.onParcelsSensing(async (perceived_parcels) => {
     let counter = 0
     // TODO check this one!!! Is it a good assumption?
     // assumption : If I do not see a parcel, it is most likely been taken by someone else
     // for (let i=0;i< MAX_WIDTH; i++){
     //     for(let j=0;j<MAX_HEIGHT;j++){
-    //         parcel_locations[i][j] = 0
+    //         global.parcel_locations[i][j] = 0
     //     }
     // }
     for (const p of perceived_parcels) {
-        parcels.set(p.id, p)
+        global.parcels.set(p.id, p)
         if (!p.carriedBy && p.reward > 0) {
-            parcel_locations[p.x][p.y] = 1
+            global.parcel_locations[p.x][p.y] = 1
         }
         else {
-            if (p.carriedBy === me.id) {
+            if (p.carriedBy === global.me.id) {
                 counter += 1;
             }
         }
     }
-    n_parcels = counter;
+    global.n_parcels = counter;
 
 })
 
@@ -170,7 +164,7 @@ client.onParcelsSensing(async (perceived_parcels) => {
 /**
  * Options generation and filtering function
  */
-client.onParcelsSensing(parcels => {
+global.client.onParcelsSensing(parcels => {
 
     // TODO revisit beliefset revision so to trigger option generation only in the case a new parcel is observed
 
@@ -193,7 +187,7 @@ client.onParcelsSensing(parcels => {
         //check if option is in myAgent.intention_queue
         if (option[0] == 'go_pick_up' && !myAgent.intention_queue.find((i) => i.predicate.join(' ') == option.join(' '))) {
             let [go_pick_up, x, y, id] = option;
-            let current_d = distance({ x, y }, me)
+            let current_d = distance({ x, y }, global.me)
             if (current_d > 0 && current_d < nearest) {
                 best_option = option
                 nearest = current_d
@@ -222,11 +216,6 @@ const myAgent = new IntentionRevisionQueue();
 // const myAgent = new IntentionRevisionRevise();
 myAgent.loop();
 
-const planLibrary = [];
-planLibrary.push(GoPickUp)
-planLibrary.push(GoPutDown)
-planLibrary.push(GoTo)
-planLibrary.push(RandomMove)
 
 
-export {myAgent, me, n_parcels, deliveroo_map, deliveroo_graph, client, delivery_tiles, distance, parcel_locations, parcels, spawning_tiles, all_spawning, planLibrary}
+export { myAgent, deliveroo_map}

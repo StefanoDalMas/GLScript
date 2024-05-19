@@ -1,5 +1,4 @@
 import {Intention} from '../intentions/intention.js';
-import {IntentionRevision, IntentionRevisionQueue} from '../intentions/intentionRevision.js';
 class Plan {
 
     // This is used to stop the plan

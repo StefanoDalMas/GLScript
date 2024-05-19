@@ -1,8 +1,5 @@
-
-import {Plan} from './plan.js';
-import {findBestTile} from '../tools/findBestTile.js';
-import { astar, Graph } from "../tools/astar.js"
-import {deliveroo_graph,delivery_tiles,spawning_tiles,me, parcel_locations, client} from '../main.js';
+import { Plan } from './plan.js';
+import { global } from '../tools/globals.js';
 
 class GoPickUp extends Plan {
 
@@ -14,10 +11,10 @@ class GoPickUp extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        let status = await client.pickup()
-        // parcel_locations = parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
+        let status = await global.client.pickup()
+        // global.parcel_locations = global.parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
         if (status) {
-            parcel_locations[x][y] = 0
+            global.parcel_locations[x][y] = 0
             console.log("provo a tirar su con PICK UP")
             if (this.stopped) throw ['stopped']; // if stopped then quit
             return true;
@@ -27,4 +24,4 @@ class GoPickUp extends Plan {
 
 }
 
-export {GoPickUp};
+export { GoPickUp };
