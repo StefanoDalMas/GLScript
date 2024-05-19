@@ -1,4 +1,4 @@
-import {planLibrary} from '../plans/planLibrary.js'
+import {planLibrary} from '../plans/plans.js'
 class Intention {
 
     // Plan currently used for achieving the intention 

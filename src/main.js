@@ -2,27 +2,16 @@ import { Graph } from "./tools/astar.js"
 import { distance } from "./tools/distance.js"
 import { IntentionRevisionQueue } from "./intentions/intentionRevision.js";
 import { global } from "./tools/globals.js"
-import { setPlans } from "./plans/planLibrary.js";
-import { GoPickUp } from "./plans/goPickUp.js";
-import { GoPutDown } from "./plans/goPutDown.js";
-import { GoTo } from "./plans/goTo.js";
-import { RandomMove } from "./plans/randomMove.js";
 
 /**
  * Intention
  */
-setPlans({
-    GoPickUp,
-    GoPutDown,
-    GoTo,
-    RandomMove
-});
 
 
 
 
 
-const MAX_QUEUE = 2
+
 
 
 
@@ -198,7 +187,7 @@ global.client.onParcelsSensing(parcels => {
     /**
      * Best option is selected
      */
-    if (best_option && myAgent.intention_queue.length < MAX_QUEUE) {
+    if (best_option && myAgent.intention_queue.length < global.MAX_QUEUE_SIZE) {
         // console.log("best option: ", best_option)
         myAgent.push(best_option)
     }
