@@ -89,7 +89,8 @@ class GoTo extends Plan {
                 this.log('stucked, no path foound');
                 throw ['stucked', 'no path foound'];
             }
-            for (let index = 0; index < path.length; index++) {
+            let blocked = false;
+            for (let index = 0; index < path.length && !blocked ; index++) {
                 // TODO: controllo da fare per skippare la go put down se non ho niente in testa
                 // il valore che si tiene in testa va calcolato con formula, me.score è il punteggio totale T.T
                 // if (this.parent instanceof GoPutDown) {
@@ -121,8 +122,10 @@ class GoTo extends Plan {
                     global.me.y = Math.round(status.y);
                     me_y = global.me.y;
                 } else {
-                    this.log('stucked, movement fail');
-                    throw ['stucked', 'movement fail'];
+                    blocked = true;
+                    // TODO logica del riprovare il percorso
+                    // this.log('stucked, movement fail');
+                    // throw ['stucked', 'movement fail'];
                 }
 
                 // if (this.stopped) throw ['stopped']; // if stopped then quit
