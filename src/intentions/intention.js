@@ -1,6 +1,13 @@
 import {planLibrary} from '../plans/plans.js'
 class Intention {
 
+    // priorities for maxHeap
+    static predicatePriority = {
+        'go_put_down': 5,
+        'random_move': 2,
+        'go_pick_up': 3
+    };
+
     // Plan currently used for achieving the intention 
     #current_plan;
 
@@ -28,6 +35,10 @@ class Intention {
         return this.#predicate;
     }
     #predicate;
+
+    get priority() {
+        return Intention.predicatePriority[this.#predicate[0]] || 0;
+    }
 
     constructor(parent, predicate) {
         this.#parent = parent;

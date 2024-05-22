@@ -133,7 +133,10 @@ class GoTo extends Plan {
                 if (me_x != x || me_y != y) {
                     // se sono su una consegna, consegno
                     if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.n_parcels > 0) {
-                        await global.client.putdown()
+                        let status = await global.client.putdown();
+                        if (status) {
+                            global.n_parcels = 0;
+                        }
                     }
                     if (this.stopped) throw ['stopped']; // if stopped then quit
                     // if I pass on a parcel, I pick it up and remove it from belief set
@@ -172,6 +175,7 @@ class GoPutDown extends Plan {
         let status = await global.client.putdown();
         if (status) {
             global.go_put_down_tries = 0;
+            global.n_parcels = 0;
             return true;
         }
         return false;

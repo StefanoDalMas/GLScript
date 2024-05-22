@@ -2,11 +2,14 @@ import { Intention } from './intention.js';
 import { findBestTile } from '../tools/findBestTile.js';
 import { global } from '../tools/globals.js';
 import { Parcel } from '../classes/parcel.js';
+import { MaxHeap } from '../tools/maxHeap.js';
 
 
 class IntentionRevision {
 
-    #intention_queue = new Array();
+    // [MaxHeap]
+    // #intention_queue = new Array();
+    #intention_queue = new MaxHeap();
     get intention_queue() {
         return this.#intention_queue;
     }
@@ -27,14 +30,17 @@ class IntentionRevision {
             console.log("go_put_down_tries = ", global.go_put_down_tries)
             if (this.intention_queue.length > 0) {
                 var result = "";
-                for (var i = 0; i < this.intention_queue.length; i++) {
-                    result += this.intention_queue[i].predicate;
-                    if (i !== this.intention_queue.length - 1) {
-                        result += " "; // Aggiungi uno spazio tra gli elementi, tranne l'ultimo
-                    }
-                }
 
-                console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
+                // for (var i = 0; i < this.intention_queue.length; i++) {
+                //     result += this.intention_queue[i].predicate;
+                //     if (i !== this.intention_queue.length - 1) {
+                //         result += " "; // Aggiungi uno spazio tra gli elementi, tranne l'ultimo
+                //     }
+                // }
+
+                // [MaxHeap]
+                // console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
+                console.log('intentionRevision.loop', this.intention_queue.toArray().map(i => i.predicate));
 
                 // -----------
                 console.log("n_paracels >= maxPickedParacels: ", global.n_parcels >= global.MAX_PICKED_PARCELS)
@@ -58,7 +64,9 @@ class IntentionRevision {
                 }
 
                 // Current intention
-                const intention = this.intention_queue[0];
+                // [MaxHeap]
+                // const intention = this.intention_queue[0];
+                const intention = this.intention_queue.extractMax();
 
                 // Is queued intention still valid? Do I still want to achieve it?
                 if (intention.predicate[0] === 'go_pick_up') {
@@ -70,7 +78,8 @@ class IntentionRevision {
                     //parcel_locations lo settiamo mai a 0?
                     if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0 || guessed_reward <= 0) {
                         console.log('Skipping intention because no more valid', intention.predicate)
-                        this.intention_queue.shift();
+                        // [MaxHeap]
+                        // this.intention_queue.shift();
                         continue;
                     }
                 }
@@ -83,7 +92,8 @@ class IntentionRevision {
                     });
 
                 // Remove from the queue
-                this.intention_queue.shift();
+                // [MaxHeap]
+                // this.intention_queue.shift();
 
             } else if (global.n_parcels && global.go_put_down_tries < 10 && !global.put_down_in_queue) {
 
@@ -191,7 +201,24 @@ class IntentionRevisionRevise extends IntentionRevision {
 
 }
 
+class IntentionRevisionMaxHeap extends IntentionRevision {
+
+    async push(predicate) {
+
+        if (predicate) {
+            // Check if already queued
+            if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
+                return; // intention is already queued
+
+            console.log('IntentionRevisionReplace.push', predicate);
+            const intention = new Intention(this, predicate);
+            this.intention_queue.insert(intention);
+        }
+    }
+
+}
 
 
 
-export { IntentionRevisionQueue, IntentionRevisionStack, IntentionRevisionReplace, IntentionRevision }
+
+export { IntentionRevisionQueue, IntentionRevisionStack, IntentionRevisionReplace, IntentionRevision, IntentionRevisionMaxHeap }

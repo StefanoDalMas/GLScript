@@ -1,6 +1,6 @@
 import { Graph } from "./tools/astar.js"
 import { distance } from "./tools/distance.js"
-import { IntentionRevisionQueue } from "./intentions/intentionRevision.js";
+import { IntentionRevisionQueue, IntentionRevisionMaxHeap } from "./intentions/intentionRevision.js";
 import { global } from "./tools/globals.js"
 import { Parcel } from './classes/parcel.js';
 import { Agent } from './classes/agents.js';
@@ -169,10 +169,12 @@ global.client.onParcelsSensing(parcels => {
  * Intention revision loop
  */
 
-const myAgent = new IntentionRevisionQueue();
+// const myAgent = new IntentionRevisionQueue();
 // const myAgent = new IntentionRevisionStack();
 // const myAgent = new IntentionRevisionReplace();
 // const myAgent = new IntentionRevisionRevise();
+// [MaxHeap]
+const myAgent = new IntentionRevisionMaxHeap();
 myAgent.loop();
 
 
