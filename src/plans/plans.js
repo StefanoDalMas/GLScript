@@ -57,7 +57,6 @@ class GoPickUp extends Plan {
         let status = await global.client.pickup()
         // global.parcel_locations = global.parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
         if (status) {
-            global.n_parcels += 1;
             global.parcel_locations[x][y] = 0
             console.log("provo a tirar su con PICK UP")
             if (this.stopped) throw ['stopped']; // if stopped then quit
@@ -131,10 +130,7 @@ class GoTo extends Plan {
                 if (me_x != x || me_y != y) {
                     // se sono su una consegna, consegno
                     if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.n_parcels > 0) {
-                        let status = await global.client.putdown()
-                        if (status) {
-                            global.n_parcels = 0;
-                        }
+                        await global.client.putdown()
                     }
                     if (this.stopped) throw ['stopped']; // if stopped then quit
                     // if I pass on a parcel, I pick it up and remove it from belief set
@@ -144,7 +140,6 @@ class GoTo extends Plan {
                         let status = await global.client.pickup()
                         // global.parcel_locations = global.parcel_locations.filter(item => !(item[0] !== global.me.x && item[1] !== global.me.y))
                         if (status) {
-                            global.n_parcels += 1;
                             global.parcel_locations[me_x][me_y] = 0
                         }
                     }
@@ -173,7 +168,6 @@ class GoPutDown extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await global.client.putdown();
         if (status) {
-            global.n_parcels = 0;
             global.go_put_down_tries = 0;
             return true;
         }

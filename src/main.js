@@ -133,7 +133,7 @@ global.client.onParcelsSensing(async (perceived_parcels) => {
             }
         }
     }
-    // global.n_parcels = counter;
+    global.n_parcels = counter;
 
 })
 
