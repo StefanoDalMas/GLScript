@@ -2,20 +2,20 @@ import { Graph } from "./tools/astar.js"
 import { distance } from "./tools/distance.js"
 import { IntentionRevisionQueue } from "./intentions/intentionRevision.js";
 import { global } from "./tools/globals.js"
+import { Parcel } from './classes/parcel.js';
+import { Agent } from './classes/agents.js';
 
 
 
 // TODO evaluation of decaying parcels & data for timers to be checked
-let OBSERVATION_DISTANCE;
-let CLOCK;
-let MOVEMENT_DURATION;
-let PARCEL_DECADING_INTERVAL;
 global.client.onConfig(config => {
     console.log("config", config)
-    OBSERVATION_DISTANCE = config.PARCELS_OBSERVATION_DISTANCE
-    CLOCK = config.CLOCK
-    MOVEMENT_DURATION = config.MOVEMENT_DURATION
-    PARCEL_DECADING_INTERVAL = config.PARCEL_DECADING_INTERVAL
+    // global.PARCELS_OBSERVATION_DISTANCE = config.PARCELS_OBSERVATION_DISTANCE
+    global.CLOCK = config.CLOCK
+    global.MOVEMENT_STEPS = config.MOVEMENT_STEPS
+    global.MOVEMENT_DURATION = config.MOVEMENT_DURATION
+    global.PARCEL_DECADING_INTERVAL = config.PARCEL_DECADING_INTERVAL
+    console.log("decaying?", global.decaying_active())
 })
 
 let deliveroo_map;
@@ -24,7 +24,6 @@ let MAX_HEIGHT;
 
 
 global.client.onMap((width, height, tiles) => {
-    console.log(tiles);
 
     MAX_WIDTH = width - 1;
     MAX_HEIGHT = height - 1;
@@ -51,40 +50,23 @@ global.client.onMap((width, height, tiles) => {
 
     if (global.spawning_tiles.length === tiles.length - global.delivery_tiles.length) {
         global.all_spawning = true;
-        console.log("aSDKJFHSADLKJFHASDLKJFHALSKJDHFLAKJSDHF", global.all_spawning)
     }
 
     global.deliveroo_graph = new Graph(deliveroo_map);
-    // global.deliveroo_graph.setWall(1, 0);
-    // global.deliveroo_graph.setWall(9, 3);
-    // global.deliveroo_graph.setWall(5, 0);
-    // global.deliveroo_graph.setWall(6, 9);
-
+    global.deliveroo_map = deliveroo_map;
+    global.MAX_HEIGHT = MAX_HEIGHT;
+    global.MAX_WIDTH = MAX_WIDTH;
 })
 
 
-let agentsLocations = new Map(); //agent.id -> (old_location, new_location)
 
 global.client.onAgentsSensing(async (agents) => {
-    let agent_x = Math.round(global.me.x);
-    let agent_y = Math.round(global.me.y);
     //     //for each agent that I see, set the old location and the new location
     //     // if it is the first time I see the agent, the old location is the same as the new location
-    //     agents.forEach(agent => {
-    //         let agent_id = agent.id;
-    //         let old_location = agentsLocations.get(agent_id) ? agentsLocations.get(agent_id)[1] : { x: agent_x, y: agent_y };
-    //         let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
-    //         agentsLocations.set(agent_id, [old_location, new_location]);
-    //     })
-    //     //for clarity, the 2 for loops are separated
-    //     agentsLocations.forEach((value, key) => {
-    //         console.log("value is      ", value);
-    //         let old_location = value[0];
-    //         let new_location = value[1];
-    //         global.deliveroo_graph.setWalkable(old_location.x, old_location.y);
-    //         global.deliveroo_graph.setWall(new_location.x, new_location.y);
-    // })
-    // Better? idea: I only set wall to the agents that I actually see
+    agents.forEach(agent => {
+        global.agentsLocations.set(new Agent(agent));
+    })
+    // For now I only set wall to the agents that I actually see
     for (let i = 0; i < MAX_WIDTH; i++) {
         for (let j = 0; j < MAX_HEIGHT; j++) {
             if (deliveroo_map[i][j] == 1) {
@@ -92,8 +74,8 @@ global.client.onAgentsSensing(async (agents) => {
             }
         }
     }
+    //has to be changed!
     agents.forEach(agent => {
-        let agent_id = agent.id;
         let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
         global.deliveroo_graph.setWall(new_location.x, new_location.y);
     })
@@ -123,7 +105,7 @@ global.client.onParcelsSensing(async (perceived_parcels) => {
     //     }
     // }
     for (const p of perceived_parcels) {
-        global.parcels.set(p.id, p)
+        global.parcels.set(p.id, new Parcel(p))
         if (!p.carriedBy && p.reward > 0) {
             global.parcel_locations[p.x][p.y] = 1
         }
@@ -134,7 +116,6 @@ global.client.onParcelsSensing(async (perceived_parcels) => {
         }
     }
     global.n_parcels = counter;
-
 })
 
 
@@ -152,22 +133,23 @@ global.client.onParcelsSensing(parcels => {
     const options = []
     for (const parcel of parcels.values())
         if (!parcel.carriedBy)
-            options.push(['go_pick_up', Math.round(parcel.x), Math.round(parcel.y), parcel.id]);
+            options.push(['go_pick_up', new Parcel(parcel)]);
     // myAgent.push( [ 'go_pick_up', parcel.x, parcel.y, parcel.id ] )
 
     /**
      * Options filtering (belief filtering)
      */
     let best_option;
-    let nearest = Number.MAX_VALUE;
+    let reward = Number.NEGATIVE_INFINITY;
     for (const option of options) {
         //check if option is in myAgent.intention_queue
         if (option[0] == 'go_pick_up' && !myAgent.intention_queue.find((i) => i.predicate.join(' ') == option.join(' '))) {
-            let [go_pick_up, x, y, id] = option;
-            let current_d = distance({ x, y }, global.me)
-            if (current_d > 0 && current_d < nearest) {
+            let parcel = option[1];
+            let current_d = distance(parcel.getLocation(), global.me);
+            let current_reward = parcel.rewardAfterNSteps(current_d);
+            if (current_reward > 0 && current_reward > reward) {
                 best_option = option
-                nearest = current_d
+                reward = current_reward
             }
         }
     }
@@ -177,9 +159,9 @@ global.client.onParcelsSensing(parcels => {
      */
     if (best_option && myAgent.intention_queue.length < global.MAX_QUEUE_SIZE) {
         // console.log("best option: ", best_option)
-        myAgent.push(best_option)
+        let parcel = best_option[1];
+        myAgent.push(parcel.intoPredicate(best_option[0]))
     }
-
 
 })
 
@@ -195,4 +177,4 @@ myAgent.loop();
 
 
 //is the export needed now?
-export { myAgent}
+export { myAgent }

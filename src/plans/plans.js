@@ -1,4 +1,4 @@
-import {Intention} from '../intentions/intention.js';
+import { Intention } from '../intentions/intention.js';
 import { global } from '../tools/globals.js';
 import { astar } from "../tools/astar.js"
 import { findBestTile } from '../tools/findBestTile.js';
@@ -21,7 +21,7 @@ class Plan {
      * #parent refers to caller
      */
     parent;
-    
+
     constructor(parent) {
         this.parent = parent;
     }
@@ -90,7 +90,7 @@ class GoTo extends Plan {
                 throw ['stucked', 'no path foound'];
             }
             let blocked = false;
-            for (let index = 0; index < path.length && !blocked ; index++) {
+            for (let index = 0; index < path.length && !blocked; index++) {
                 // TODO: controllo da fare per skippare la go put down se non ho niente in testa
                 // il valore che si tiene in testa va calcolato con formula, me.score è il punteggio totale T.T
                 // if (this.parent instanceof GoPutDown) {
@@ -251,4 +251,4 @@ planLibrary.push(GoPutDown);
 planLibrary.push(GoTo);
 planLibrary.push(RandomMove);
 
-export {planLibrary};
+export { planLibrary };

@@ -13,6 +13,7 @@ class Global {
         this.MAX_PICKED_PARCELS = 3;
 
         this.me = {};
+        this.agentsLocations = new Map();
 
         this.parcels = new Map();
         this.parcel_locations = [];
@@ -21,6 +22,19 @@ class Global {
         this.spawning_tiles = [];
         this.all_spawning = false;
 
+        this.PARCEL_DECADING_INTERVAL;
+        this.MOVEMENT_DURATION;
+        this.MOVEMENT_STEPS;
+        this.CLOCK;
+
+        //might be needed for map stuff
+        this.deliveroo_map;
+        this.MAX_WIDTH;
+        this.MAX_HEIGHT;
+    }
+
+    decaying_active() {
+        return this.PARCEL_DECADING_INTERVAL !== "infinite";
     }
 }
 

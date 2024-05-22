@@ -1,6 +1,7 @@
 import { Intention } from './intention.js';
 import { findBestTile } from '../tools/findBestTile.js';
 import { global } from '../tools/globals.js';
+import { Parcel } from '../classes/parcel.js';
 
 
 class IntentionRevision {
@@ -58,8 +59,11 @@ class IntentionRevision {
                 if (intention[0] == 'go_pick_up') {
                     let id = intention.predicate[3]
                     let p = global.parcels.get(id)
+                    let current_d = distance(p.getLocation(), global.me)
+                    let current_reward = p.rewardAfterNSteps(current_d);
 
-                    if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0) {
+                    //parcel_locations lo settiamo mai a 0?
+                    if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0 && current_reward >= 0) {
                         console.log('Skipping intention because no more valid', intention.predicate)
                         continue;
                     }

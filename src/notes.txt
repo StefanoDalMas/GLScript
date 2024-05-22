@@ -25,13 +25,10 @@ intentions implementations:
     + random move: sceglie tile camminabile a distanza 1 e ci va (con astar ma l'è stesso)
 
 TODO NOW
-- raccogliere configurazione del decay ed inserirla nel global state (per valutare rewardCalculator)
-- implementate rewardCalculator
-
-- inserire 
 - gestione parcelle presenti:
     1 - settare un timer ogni PARCEL_DECADING_INTERVAL che decrementa gli score delle parcelle salvate
     2 - quando dovrei vedere la parcella, controllare che sia ancora la
+        Exploit timestamp locale nella parcella, capire come fare
 
 - quando sto consegnando e la parcella mi scade esco dal Plan perchè non ha senso andare fino in fondo, meglio fare random move
     + magari non quando la parcella mia scade, ma magari quando il valore che ho in testa è diventato troppo basso.

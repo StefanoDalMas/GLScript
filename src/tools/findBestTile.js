@@ -2,6 +2,7 @@
 import { distance } from "./distance.js";
 import { global } from './globals.js';
 
+
 function findBestTile(tiles_to_check) {
     let best_option;
     let nearest = Number.MAX_VALUE;
