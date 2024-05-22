@@ -20,13 +20,13 @@ class Parcel {
         let secondsPassing = (steps / global.MOVEMENT_STEPS) * (global.MOVEMENT_DURATION / 1000);
         switch (global.PARCEL_DECADING_INTERVAL) {
             case "1s":
-                return this.reward; - Math.round(secondsPassing);
+                return this.reward - Math.round(secondsPassing);
             case "2s":
-                return this.reward; - Math.round(secondsPassing / 2);
+                return this.reward - Math.round(secondsPassing / 2);
             case "5s":
-                return this.reward; - Math.round(secondsPassing / 5);
+                return this.reward - Math.round(secondsPassing / 5);
             case "10s":
-                return this.reward; - Math.round(secondsPassing / 10);
+                return this.reward - Math.round(secondsPassing / 10);
             case "infinite":
                 return this.reward;
         }
@@ -41,15 +41,15 @@ class Parcel {
         }
         switch (global.PARCEL_DECADING_INTERVAL) {
             case "1s":
-                return this.reward; - Math.round(seconds);
+                return this.reward - Math.round(seconds);
             case "2s":
-                return this.reward; - Math.round(seconds / 2);
+                return this.reward - Math.round(seconds / 2);
             case "5s":
-                return this.reward; - Math.round(seconds / 5);
+                return this.reward - Math.round(seconds / 5);
             case "10s":
-                return this.reward; - Math.round(seconds / 10);
+                return this.reward - Math.round(seconds / 10);
             case "infinite":
-                return this.reward;
+                return this.reward
         }
     }
 

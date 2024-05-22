@@ -60,10 +60,10 @@ class IntentionRevision {
                     let id = intention.predicate[3]
                     let p = global.parcels.get(id)
                     let current_d = distance(p.getLocation(), global.me)
-                    let current_reward = p.rewardAfterNSteps(current_d);
+                    let guessed_reward = p.rewardAfterNSteps(current_d);
 
                     //parcel_locations lo settiamo mai a 0?
-                    if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0 && current_reward >= 0) {
+                    if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0 || guessed_reward <= 0) {
                         console.log('Skipping intention because no more valid', intention.predicate)
                         continue;
                     }
