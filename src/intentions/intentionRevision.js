@@ -36,16 +36,16 @@ class IntentionRevision {
 
                 console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
 
-                if (global.n_parcels == MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x != undefined && global.me.y != undefined && global.go_put_down_tries < 10) {
+                if (global.n_parcels == MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x && global.me.y && global.go_put_down_tries < 10) {
 
-                    global.go_put_down_tries += 1;
-
+                    
                     /**
                      * Options filtering (trovo la tile di consegnap più vicina)
-                     */
-                    let best_option = findBestTile(global.delivery_tiles);
-
-                    if (best_option) {
+                    */
+                   let best_option = findBestTile(global.delivery_tiles);
+                   
+                   if (best_option) {
+                        global.go_put_down_tries += 1;
                         this.push(['go_put_down', best_option[0], best_option[1]]);
                         global.put_down_in_queue = true;
                     }
@@ -76,15 +76,15 @@ class IntentionRevision {
                 // Remove from the queue
                 this.intention_queue.shift();
 
-            } else if (global.n_parcels && global.go_put_down_tries < 10) {
+            } else if (global.n_parcels && global.go_put_down_tries < 10 && !global.put_down_in_queue) {
 
-                global.go_put_down_tries += 1;
-
+                
                 /**
                  * Options filtering (trovo la tile di consegnap più vicina)
-                 */
-                let best_option = findBestTile(global.delivery_tiles);
-                if (best_option) {
+                */
+               let best_option = findBestTile(global.delivery_tiles);
+               if (best_option) {
+                    global.go_put_down_tries += 1;
                     this.push(['go_put_down', best_option[0], best_option[1]]);
                     global.put_down_in_queue = true;
                 }
