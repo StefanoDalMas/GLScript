@@ -36,7 +36,7 @@ class IntentionRevision {
 
                 console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
 
-                if (global.n_parcels == global.MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x && global.me.y && global.go_put_down_tries < 10) {
+                if (global.n_parcels >= global.MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x && global.me.y && global.go_put_down_tries < 10) {
 
 
                     /**
@@ -53,14 +53,14 @@ class IntentionRevision {
 
                 // Current intention
                 const intention = this.intention_queue[0];
-                console.log(intention)
+                console.log("dioca",intention.predicate)
 
                 // Is queued intention still valid? Do I still want to achieve it?
-                if (intention[0] == 'go_pick_up') {
+                if (intention.predicate[0] === 'go_pick_up') {
                     let id = intention.predicate[3]
                     let p = global.parcels.get(id)
-                    let current_d = distance(p.getLocation(), global.me)
-                    let guessed_reward = p.rewardAfterNSteps(current_d);
+                    let seconds = (Date.now() - p.timestamp)/1000;
+                    let guessed_reward = p.rewardAfterNSeconds(seconds);
 
                     //parcel_locations lo settiamo mai a 0?
                     if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0 || guessed_reward <= 0) {

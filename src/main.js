@@ -64,7 +64,7 @@ global.client.onAgentsSensing(async (agents) => {
     //     //for each agent that I see, set the old location and the new location
     //     // if it is the first time I see the agent, the old location is the same as the new location
     agents.forEach(agent => {
-        global.agentsLocations.set(new Agent(agent));
+        global.agentsLocations.set(agent.id,new Agent(agent));
     })
     // For now I only set wall to the agents that I actually see
     for (let i = 0; i < MAX_WIDTH; i++) {
