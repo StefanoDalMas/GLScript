@@ -53,9 +53,6 @@ class Parcel {
         }
     }
 
-    unpack(){
-        return this.x + " " + this.y + " " + this.id;
-    }
 
     getLocation(){
         return {x: this.x, y: this.y};
