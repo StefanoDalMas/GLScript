@@ -36,6 +36,12 @@ class IntentionRevision {
 
                 console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
 
+                // -----------
+                console.log("n_paracels >= maxPickedParacels: ", global.n_parcels >= global.MAX_PICKED_PARCELS)
+                console.log("put_down_in_queue: ", global.put_down_in_queue)
+                console.log("me.x && me.y: ", global.me.x && global.me.y)
+                console.log("go_put_down_tries < 10: ", global.go_put_down_tries < 10)
+                // -----------
                 if (global.n_parcels >= global.MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x && global.me.y && global.go_put_down_tries < 10) {
 
 
@@ -53,7 +59,6 @@ class IntentionRevision {
 
                 // Current intention
                 const intention = this.intention_queue[0];
-                console.log("dioca",intention.predicate)
 
                 // Is queued intention still valid? Do I still want to achieve it?
                 if (intention.predicate[0] === 'go_pick_up') {
@@ -65,6 +70,7 @@ class IntentionRevision {
                     //parcel_locations lo settiamo mai a 0?
                     if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0 || guessed_reward <= 0) {
                         console.log('Skipping intention because no more valid', intention.predicate)
+                        this.intention_queue.shift();
                         continue;
                     }
                 }
