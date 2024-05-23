@@ -115,6 +115,9 @@ global.client.onParcelsSensing(async (perceived_parcels) => {
             }
         }
     }
+    if (perceived_parcels.length !== 0) {
+        console.log("parcels", perceived_parcels);
+    }
     global.n_parcels = counter;
 })
 

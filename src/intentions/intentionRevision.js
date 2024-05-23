@@ -3,6 +3,7 @@ import { findBestTile } from '../tools/findBestTile.js';
 import { global } from '../tools/globals.js';
 import { Parcel } from '../classes/parcel.js';
 import { MaxHeap } from '../tools/maxHeap.js';
+import { distance } from '../tools/distance.js';
 
 
 class IntentionRevision {
@@ -71,9 +72,9 @@ class IntentionRevision {
                 // Is queued intention still valid? Do I still want to achieve it?
                 if (intention.predicate[0] === 'go_pick_up') {
                     let id = intention.predicate[3]
-                    let p = global.parcels.get(id)
-                    let seconds = (Date.now() - p.timestamp)/1000;
-                    let guessed_reward = p.rewardAfterNSeconds(seconds);
+                    let p = global.parcels.get(id);
+                    let current_d = distance(p.getLocation(), global.me);
+                    let guessed_reward = p.rewardAfterNSteps(current_d);
 
                     //parcel_locations lo settiamo mai a 0?
                     if (p && p.carriedBy || global.parcel_locations[p.x][p.y] == 0 || guessed_reward <= 0) {
