@@ -32,15 +32,16 @@ TODO NOW
     Per fare sta cosa bisogna fare il conto manuale dei punti che si hanon in testa prechè in me.score c'è il punteggio totale del game.
 - miglior metodo per passare il grafo(ground truth + locazioni)???
 
-- capire come usare il Planner
+- capire come usare il Planner :
     - montare docker( se possibile )
-    - definire wrapper pddl
-    - definire le operazioni possibili con pddl
+    - trasformare oggetti in memoria in stringhe per PDDL
+    - attaccare il PDDL e mandare i dati creati
+    - quando ritorna il suo Plan, eseguirlo
 - Comunicazione :
     - iniziare con handshake(A shout "ally?"+ payload e B risponde con il suo)
     - onParcel/Agent Sensing inviarsi i dati ed aggiornarli
     - capire che fare con i dati / inventarsi logica utilizzando Master - Slave concept
-    - brute force agli altri agenti(?)
+    - brute force agli altri agenti(?) + 1 esame
 
 fine
 

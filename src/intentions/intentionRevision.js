@@ -73,8 +73,8 @@ class IntentionRevision {
                 if (intention.predicate[0] === 'go_pick_up') {
                     let id = intention.predicate[3]
                     let p = global.parcels.get(id);
-                    let current_d = distance(p.getLocation(), global.me);
-                    let guessed_reward = p.rewardAfterNSteps(current_d);
+                    let seconds_passed = (Date.now() - p.timestamp) / 1000;
+                    let guessed_reward = p.rewardAfterNSeconds(seconds_passed);
 
                     //parcelLocations lo settiamo mai a 0?
                     if (p && p.carriedBy || global.parcelLocations[p.x][p.y].present == 0 || guessed_reward <= 0) {

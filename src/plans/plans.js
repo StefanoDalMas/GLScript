@@ -253,11 +253,23 @@ class RandomMove extends Plan {
     }
 }
 
+class PDDLPlan extends Plan{
+    static isApplicableTo(random_move, x, y) {
+        return random_move == 'random_move';
+    }
+    async execute(){
+        console.log("create PDDL string");
+        console.log("sending to remote solver");
+        console.log("unpack plan");
+    }
+}
+
 
 const planLibrary = []
 planLibrary.push(GoPickUp);
 planLibrary.push(GoPutDown);
 planLibrary.push(GoTo);
 planLibrary.push(RandomMove);
+planLibrary.push(PDDLPlan);
 
 export { planLibrary };
