@@ -10,9 +10,9 @@ class IntentionRevision {
 
     // [MaxHeap]
     // #intention_queue = new Array();
-    #intention_queue = new MaxHeap();
+    intention_queue = new MaxHeap();
     get intention_queue() {
-        return this.#intention_queue;
+        return this.intention_queue;
     }
 
     #map_graph
@@ -27,7 +27,7 @@ class IntentionRevision {
         while (true) {
 
             // Consumes intention_queue if not empty
-            console.log("dimensione:", this.#intention_queue.length)
+            console.log("dimensione:", this.intention_queue.length)
             console.log("go_put_down_tries = ", global.go_put_down_tries)
             if (this.intention_queue.length > 0) {
                 var result = "";
@@ -121,6 +121,13 @@ class IntentionRevision {
             // Postpone next iteration at setImmediate
             await new Promise(res => setImmediate(res));
         }
+    }
+
+    length() {
+        return this.intention_queue.length;
+    }
+    find(callback) {
+        return this.intention_queue.find(callback);
     }
 
     // async push ( predicate ) { }
