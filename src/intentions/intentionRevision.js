@@ -44,12 +44,12 @@ class IntentionRevision {
                 console.log('intentionRevision.loop', this.intention_queue.toArray().map(i => i.predicate));
 
                 // -----------
-                console.log("n_paracels >= maxPickedParacels: ", global.n_parcels >= global.MAX_PICKED_PARCELS)
+                console.log("n_paracels >= maxPickedParacels: ", global.me.parcels_on_head >= global.MAX_PICKED_PARCELS)
                 console.log("put_down_in_queue: ", global.put_down_in_queue)
                 console.log("me.x && me.y: ", global.me.x && global.me.y)
                 console.log("go_put_down_tries < 10: ", global.go_put_down_tries < 10)
                 // -----------
-                if (global.n_parcels >= global.MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x && global.me.y && global.go_put_down_tries < 10) {
+                if (global.me.parcels_on_head >= global.MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x && global.me.y && global.go_put_down_tries < 10) {
 
 
                     /**
@@ -96,7 +96,7 @@ class IntentionRevision {
                 // [MaxHeap]
                 // this.intention_queue.shift();
 
-            } else if (global.n_parcels && global.go_put_down_tries < 10 && !global.put_down_in_queue) {
+            } else if (global.me.parcels_on_head && global.go_put_down_tries < 10 && !global.put_down_in_queue) {
 
 
                 /**

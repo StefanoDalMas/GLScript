@@ -91,22 +91,20 @@ class GoTo extends Plan {
             }
             let blocked = false;
             for (let index = 0; index < path.length && !blocked; index++) {
-                let possible_parcel_id = global.parcelLocations[x][y].id;
-                if (possible_parcel_id) {
-                    let parcel = global.parcels.get(possible_parcel_id);
-                    if (parcel.carriedBy && parcel.carriedBy !== global.me.id) {
-                        throw ['someone took the parcel, exiting'];
+                if (this.parent instanceof GoPickUp) {
+                    let possible_parcel_id = global.parcelLocations[x][y].id;
+                    if (possible_parcel_id) {
+                        let parcel = global.parcels.get(possible_parcel_id);
+                        if (parcel.carriedBy && parcel.carriedBy !== global.me.id) {
+                            throw ['someone took the parcel, exiting'];
+                        }
                     }
                 }
-                // TODO: controllo da fare per skippare la go put down se non ho niente in testa
-                // il valore che si tiene in testa va calcolato con formula, me.score è il punteggio totale T.T
-                // if (this.parent instanceof GoPutDown) {
-                //     if (global.me.score == 0){ // SBAGLIATO!
-                //         console.log(global.me.score)
-                //         this.stop()
-                //         if (this.stopped) throw ['stopped', '0 value on my head']
-                //     }
-                // }
+                if (this.parent instanceof GoPutDown) {
+                    if (global.me.parcels_on_head === 0) {
+                        throw ['no parcels on head, exiting'];
+                    }
+                }
 
                 if (this.stopped) throw ['stopped']; // if stopped then quit
 
@@ -139,10 +137,10 @@ class GoTo extends Plan {
 
                 if (me_x != x || me_y != y) {
                     // se sono su una consegna, consegno
-                    if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.n_parcels > 0) {
+                    if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.me.parcels_on_head > 0) {
                         let status = await global.client.putdown();
                         if (status) {
-                            global.n_parcels = 0;
+                            global.me.parcels_on_head = 0;
                         }
                     }
                     if (this.stopped) throw ['stopped']; // if stopped then quit
@@ -182,7 +180,7 @@ class GoPutDown extends Plan {
         let status = await global.client.putdown();
         if (status) {
             global.go_put_down_tries = 0;
-            global.n_parcels = 0;
+            global.me.parcels_on_head = 0;
             return true;
         }
         return false;

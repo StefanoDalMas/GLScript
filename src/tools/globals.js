@@ -16,7 +16,7 @@ class Global {
 
         this.parcels = new Map();
         this.parcelLocations = []; // {present : 1/0, id : parcel_id}
-        this.n_parcels = 0
+        this.parcels_on_head = 0
         this.delivery_tiles = [];
         this.spawning_tiles = [];
         this.all_spawning = false;
