@@ -18,7 +18,7 @@ import { astar, Graph } from './src/astar.js';
 
 class ParcelLocationsSet {
     constructor() {
-        this.global.parcel_locations = {}
+        this.global.parcelLocations = {}
     }
 
     _hash(x, y) {
@@ -27,15 +27,15 @@ class ParcelLocationsSet {
 
     add(x, y) {
         const hash = this._hash(x, y)
-        this.global.parcel_locations[hash] = true;
+        this.global.parcelLocations[hash] = true;
     }
     has(x, y) {
         const hash = this._hash(x, y)
-        return this.global.parcel_locations[hash] === true;
+        return this.global.parcelLocations[hash] === true;
     }
     delete(x, y) {
         const hash = this._hash(x, y)
-        this.global.parcel_locations[hash] = false;
+        this.global.parcelLocations[hash] = false;
     }
 }
 

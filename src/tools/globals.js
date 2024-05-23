@@ -4,7 +4,6 @@ import { local, remote } from '../../config/config.js';
 class Global {
     constructor() {
         this.client = local;
-        this.parcel_locations;
 
 
         this.put_down_in_queue = false;
@@ -16,7 +15,7 @@ class Global {
         this.agentsLocations = new Map();
 
         this.parcels = new Map();
-        this.parcel_locations = [];
+        this.parcelLocations = []; // {present : 1/0, id : parcel_id}
         this.n_parcels = 0
         this.delivery_tiles = [];
         this.spawning_tiles = [];

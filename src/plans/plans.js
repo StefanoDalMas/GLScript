@@ -55,9 +55,9 @@ class GoPickUp extends Plan {
         await this.subIntention(['go_to', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await global.client.pickup()
-        // global.parcel_locations = global.parcel_locations.filter(item => !(item[0] !== x && item[1] !== y))
+        // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== x && item[1] !== y))
         if (status) {
-            global.parcel_locations[x][y] = 0
+            global.parcelLocations[x][y] = { location: 0, id: undefined };
             console.log("provo a tirar su con PICK UP")
             if (this.stopped) throw ['stopped']; // if stopped then quit
             return true;
@@ -91,6 +91,13 @@ class GoTo extends Plan {
             }
             let blocked = false;
             for (let index = 0; index < path.length && !blocked; index++) {
+                let possible_parcel_id = global.parcelLocations[x][y].id;
+                if (possible_parcel_id) {
+                    let parcel = global.parcels.get(possible_parcel_id);
+                    if (parcel.carriedBy && parcel.carriedBy !== global.me.id) {
+                        throw ['someone took the parcel, exiting'];
+                    }
+                }
                 // TODO: controllo da fare per skippare la go put down se non ho niente in testa
                 // il valore che si tiene in testa va calcolato con formula, me.score è il punteggio totale T.T
                 // if (this.parent instanceof GoPutDown) {
@@ -140,13 +147,13 @@ class GoTo extends Plan {
                     }
                     if (this.stopped) throw ['stopped']; // if stopped then quit
                     // if I pass on a parcel, I pick it up and remove it from belief set
-                    // if (global.parcel_locations.some(arr => arr[0] === global.me.x && arr[1] === global.me.y)){
-                    if (global.parcel_locations[me_x][me_y] == 1) {
+                    // if (global.parcelLocations.some(arr => arr[0] === global.me.x && arr[1] === global.me.y)){
+                    if (global.parcelLocations[me_x][me_y].present == 1) {
                         console.log("provo a tirar su con MOVE")
                         let status = await global.client.pickup()
-                        // global.parcel_locations = global.parcel_locations.filter(item => !(item[0] !== global.me.x && item[1] !== global.me.y))
+                        // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== global.me.x && item[1] !== global.me.y))
                         if (status) {
-                            global.parcel_locations[me_x][me_y] = 0
+                            global.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
                         }
                     }
                 }

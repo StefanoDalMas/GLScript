@@ -31,10 +31,10 @@ global.client.onMap((width, height, tiles) => {
     deliveroo_map = [];
     for (let i = 0; i < width; i++) {
         deliveroo_map[i] = [];
-        global.parcel_locations[i] = [];
+        global.parcelLocations[i] = [];
         for (let j = 0; j < height; j++) {
             deliveroo_map[i][j] = 0;
-            global.parcel_locations[i][j] = 0;
+            global.parcelLocations[i][j] = { present: 0, id: undefined };
         }
     }
 
@@ -64,7 +64,7 @@ global.client.onAgentsSensing(async (agents) => {
     //     //for each agent that I see, set the old location and the new location
     //     // if it is the first time I see the agent, the old location is the same as the new location
     agents.forEach(agent => {
-        global.agentsLocations.set(agent.id,new Agent(agent));
+        global.agentsLocations.set(agent.id, new Agent(agent));
     })
     // For now I only set wall to the agents that I actually see
     for (let i = 0; i < MAX_WIDTH; i++) {
@@ -101,13 +101,13 @@ global.client.onParcelsSensing(async (perceived_parcels) => {
     // assumption : If I do not see a parcel, it is most likely been taken by someone else
     // for (let i=0;i< MAX_WIDTH; i++){
     //     for(let j=0;j<MAX_HEIGHT;j++){
-    //         global.parcel_locations[i][j] = 0
+    //         global.parcelLocations[i][j] = 0
     //     }
     // }
     for (const p of perceived_parcels) {
         global.parcels.set(p.id, new Parcel(p))
         if (!p.carriedBy && p.reward > 0) {
-            global.parcel_locations[p.x][p.y] = 1
+            global.parcelLocations[p.x][p.y] = { present: 1, id: p.id }
         }
         else {
             if (p.carriedBy === global.me.id) {

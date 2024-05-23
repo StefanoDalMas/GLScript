@@ -1,6 +1,6 @@
 class LocationsSet {
     constructor() {
-        this.global.parcel_locations = {}
+        this.global.parcelLocations = {}
     }
 
     _hash(x, y) {
@@ -9,24 +9,24 @@ class LocationsSet {
 
     add(x, y) {
         const hash = this._hash(x, y)
-        this.global.parcel_locations[hash] = true
+        this.global.parcelLocations[hash] = true
     }
     has(x, y) {
         const hash = this._hash(x, y)
-        return this.global.parcel_locations[hash] === true;
+        return this.global.parcelLocations[hash] === true;
     }
     delete(x, y) {
         const hash = this._hash(x, y)
-        this.global.parcel_locations[hash] = false
+        this.global.parcelLocations[hash] = false
     }
     keys() {
-        return Object.keys(this.global.parcel_locations)
+        return Object.keys(this.global.parcelLocations)
     }
     values() {
-        return Object.values(this.global.parcel_locations)
+        return Object.values(this.global.parcelLocations)
     }
     items() {
-        return Object.entries(this.global.parcel_locations)
+        return Object.entries(this.global.parcelLocations)
     }
 }
 
