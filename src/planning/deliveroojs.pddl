@@ -1,14 +1,11 @@
 (define (domain deliveroo_js)
 
     (:requirements :strips :typing :disjunctive-preconditions)
-    ; with a - type I can define the type of the object
 
     (:types
         Tile Parcel
     )
 
-    ; un-comment following line if constants are needed
-    ;(:constants )
 
     (:predicates
         (down_of ?tile1 - Tile ?tile2 - Tile)
@@ -20,7 +17,6 @@
         (carrying ?p - Parcel)
     )
 
-    ;define actions here
     (:action move_down
         :parameters (?tile1 - Tile ?tile2 - Tile)
         :precondition (and (at ?tile1) (down_of ?tile2 ?tile1))

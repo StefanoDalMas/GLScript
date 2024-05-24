@@ -272,20 +272,27 @@ Graph.prototype.getNode = function (x, y) {
 //(tileCheck) => tileCheck.x === (node.x - 1) && tileCheck.y === node.y)
 //I need to return the tileCheck if found
 Graph.prototype.find = function (callback) {
-    for (var x = 0; x < this.grid.length; x++) {
-        for (var y = 0; y < this.grid[x].length; y++) {
+    for (let x = 0; x < this.grid.length; x++) {
+        for (let y = 0; y < this.grid[x].length; y++) {
             if (callback(this.grid[x][y])) {
                 return this.grid[x][y];
             }
         }
     }
 }
+Graph.prototype.findNodeId = function (id_string) {
+    for (var x = 0; x < this.grid.length; x++) {
+        for (var y = 0; y < this.grid[x].length; y++) {
+            let node = this.grid[x][y];
+            if (node.id === id_string) {
+                return this.grid[x][y];
+            }
+        }
+    }
+    return null; // Return null if node is not found
+};
 
-Graph.prototype.get = function (node_id) {
-    return this.nodes.find((node) => node.id === node_id);
-}
-
-let vocabulary = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+let vocabulary = 'abcdefghijklmnopqrstuvwxyz';
 
 function GridNode(x, y, weight) {
     this.x = x;

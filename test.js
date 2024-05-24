@@ -1,5 +1,5 @@
 import { onlineSolver } from "@unitn-asa/pddl-client";
-import { Graph } from './src/tools/astar.js';
+import { Graph, astar } from './src/tools/astar.js';
 
 // let graph;
 // graph = new Graph([
@@ -106,6 +106,9 @@ let map = [
 
 let graph = new Graph(map);
 
+let path = astar.search(graph, graph.grid[1][1], graph.grid[16][16]);
+
+
 let { statementList, idsToObjectMap } = await map_to_statements(graph);
 
 
@@ -125,7 +128,7 @@ class PDDLProblem {
         //add all of the objects
         let objects_str = '(:objects ';
         for (let id of idsToObjectMap) {
-            objects_str += ` ${ id } - Tile `;
+            objects_str += ` ${id} - Tile `;
         }
         objects_str += `) `;
         this.objects_str = objects_str;
@@ -148,16 +151,27 @@ class PDDLProblem {
 let problem = new PDDLProblem(graph, graph.grid[1][1], graph.grid[16][16]);
 //open a file and put the string in it
 //import fs like import {}
-let string = await problem.getProblemString();
+let problemString = await problem.getProblemString();
 import fs from 'fs';
 
-fs.writeFile('problem.pddl', string, function (err) {
+fs.writeFile('problem.pddl', problemString, function (err) {
     if (err) throw err;
     console.log('Saved!');
 });
 
 
+let domainString = fs.readFileSync('./src/planning/deliveroojs.pddl', 'utf8');
+console.log(domainString);
 
+let plan = await onlineSolver(domainString, problemString);
+
+let tmp = graph.findNodeId(plan[0].args[0]);
+
+for (let action of plan) {
+    console.log(graph.findNodeId(action.args[0]).toString(),graph.findNodeId(action.args[1].toString()));
+}
+console.log(path);
+console.log("end")
 
 
 
