@@ -6,7 +6,6 @@
         Tile Parcel
     )
 
-
     (:predicates
         (down_of ?tile1 - Tile ?tile2 - Tile)
         (up_of ?tile1 - Tile ?tile2 - Tile)

@@ -2,6 +2,10 @@ import { Intention } from '../intentions/intention.js';
 import { global } from '../tools/globals.js';
 import { astar } from "../tools/astar.js"
 import { findBestTile } from '../tools/findBestTile.js';
+import { onlineSolver } from "@unitn-asa/pddl-client";
+import { PDDLProblem } from '../planning/PDDLProblem.js';
+import fs from 'fs';
+
 class Plan {
 
     // This is used to stop the plan
@@ -52,7 +56,8 @@ class GoPickUp extends Plan {
 
     async execute(go_pick_up, x, y) {
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        await this.subIntention(['go_to', x, y]);
+        // await this.subIntention(['go_to', x, y]);
+        await this.subIntention(['pddl_move', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await global.client.pickup()
         // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== x && item[1] !== y))
@@ -175,7 +180,8 @@ class GoPutDown extends Plan {
         console.log("put_down_in_queue", global.put_down_in_queue)
         global.put_down_in_queue = false;
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        await this.subIntention(['go_to', x, y]);
+        // await this.subIntention(['go_to', x, y]);
+        await this.subIntention(['pddl_move', x, y]);
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await global.client.putdown();
         if (status) {
@@ -244,7 +250,8 @@ class RandomMove extends Plan {
                 new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
-            await this.subIntention(['go_to', new_tile.x, new_tile.y]);
+            // await this.subIntention(['go_to', new_tile.x, new_tile.y]);
+            await this.subIntention(['pddl_move', new_tile.x, new_tile.y]);
             return true;
 
         } else {
@@ -253,14 +260,86 @@ class RandomMove extends Plan {
     }
 }
 
-class PDDLPlan extends Plan{
-    static isApplicableTo(random_move, x, y) {
-        return random_move == 'random_move';
+class PDDLMove extends Plan{
+    static isApplicableTo(pddl_move, x, y) {
+        return pddl_move == 'pddl_move';
     }
-    async execute(){
-        console.log("create PDDL string");
-        console.log("sending to remote solver");
-        console.log("unpack plan");
+    async execute(pddl_move, x, y){
+        if (global.me.x != undefined && global.me.y != undefined) {
+
+            let me_x = Math.round(global.me.x);
+            let me_y = Math.round(global.me.y);
+            
+            console.log("create PDDL string");
+            let uno = global.deliveroo_graph
+            let due = global.deliveroo_graph.grid[me_x][me_y]
+            let tre = global.deliveroo_graph.grid[x][y]
+            let problem = new PDDLProblem(uno, due, tre);
+            let problemString = await problem.getProblemString();
+            let domainString = fs.readFileSync('./src/planning/deliveroojs.pddl', 'utf8').replace(/\r?\n|\r/g, '').replace(/\s\s+/g, ' ');
+            
+            console.log("sending to remote solver");
+            let plan = await onlineSolver(domainString, problemString);
+
+            if (plan) {
+                console.log("unpack plan");
+                let status = false;
+                for (let step of plan) {
+                    if (step.action == 'move_right') {
+                        console.log("move right")
+                        status = await global.client.move('right')
+                    }
+                    if (step.action == 'move_left') {
+                        console.log("move left")
+                        status = await global.client.move('left')
+                    }
+                    if (step.action == 'move_up') {
+                        console.log("move up")
+                        status = await global.client.move('up')
+                    }
+                    if (step.action == 'move_down') {
+                        console.log("move down")
+                        status = await global.client.move('down')
+                    }
+    
+                    if (status) {
+                        global.me.x = Math.round(status.x);
+                        me_x = global.me.x;
+                        global.me.y = Math.round(status.y);
+                        me_y = global.me.y;
+                    } else {
+                        console.log("blocked")
+                        // da decidere cosa fare se provo a muovermi ma qualche infame mi viene davanti e mi blocca
+                    }
+    
+                    if (me_x != x || me_y != y) {
+                        // se sono su una consegna, consegno
+                        if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.me.parcels_on_head > 0) {
+                            let status = await global.client.putdown();
+                            if (status) {
+                                global.me.parcels_on_head = 0;
+                            }
+                        }
+                        if (this.stopped) throw ['stopped']; // if stopped then quit
+                        // if I pass on a parcel, I pick it up and remove it from belief set
+                        // if (global.parcelLocations.some(arr => arr[0] === global.me.x && arr[1] === global.me.y)){
+                        if (global.parcelLocations[me_x][me_y].present == 1) {
+                            console.log("provo a tirar su con MOVE")
+                            let status = await global.client.pickup()
+                            // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== global.me.x && item[1] !== global.me.y))
+                            if (status) {
+                                global.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
+                            }
+                        }
+                    }
+                }
+            } else {
+                // qua da mettere cosa fare nel caso in cui non viene trovato un plan per andare da qualche parte (non c'è una strada perchè qualcuno in mezzo)
+                console.log("bo")
+            }
+            if (this.stopped) throw ['stopped']; // if stopped then quit
+
+        }
     }
 }
 
@@ -270,6 +349,6 @@ planLibrary.push(GoPickUp);
 planLibrary.push(GoPutDown);
 planLibrary.push(GoTo);
 planLibrary.push(RandomMove);
-planLibrary.push(PDDLPlan);
+planLibrary.push(PDDLMove);
 
 export { planLibrary };
