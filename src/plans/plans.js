@@ -318,6 +318,8 @@ class PDDLMove extends Plan {
                     let possible_parcel_id = global.parcelLocations[x][y].id;
                     if (possible_parcel_id) {
                         let parcel = global.parcels.get(possible_parcel_id);
+                        //this might not be necessary 
+                        // because it depends on if the sensing is done here
                         if (!parcel.carriedBy || parcel.carriedBy === global.me.id) {
                             let delta_seconds = Date.now() - parcel.timestamp;
                             let reward = parcel.rewardAfterNSeconds(delta_seconds / 1000);

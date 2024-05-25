@@ -25,14 +25,6 @@ intentions implementations:
     + random move: sceglie tile camminabile a distanza 1 e ci va (con astar ma l'è stesso)
 
 TODO NOW
-- quando sto consegnando e la parcella mi scade esco dal Plan perchè non ha senso andare fino in fondo, meglio fare random move
-    + magari non quando la parcella mia scade, ma magari quando il valore che ho in testa è diventato troppo basso.
-    In generale questo approccio va un po' contro la logica del tipo "se non ho niente da fare consegno".
-    Si può fare il caso specifico dove il valore diventa 0 e basta magari.
-    Per fare sta cosa bisogna fare il conto manuale dei punti che si hanon in testa prechè in me.score c'è il punteggio totale del game.
-- miglior metodo per passare il grafo(ground truth + locazioni)???
-
-
 - Comunicazione :
     - iniziare con handshake(A shout "ally?"+ payload e B risponde con il suo)
     - onParcel/Agent Sensing inviarsi i dati ed aggiornarli
