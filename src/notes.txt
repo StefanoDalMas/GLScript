@@ -30,6 +30,10 @@ TODO NOW
     - onParcel/Agent Sensing inviarsi i dati ed aggiornarli
     - capire che fare con i dati / inventarsi logica utilizzando Master - Slave concept
     - brute force agli altri agenti(?) + 1 esame
+- Refactor : 
+    - Global dovrà diventare BeliefSet
+    - Tutte le cose che vengono utilizzate come parametri diventeranno un'altra classe tipo Params o Config o qualcosa del genere
+
 
 fine
 
