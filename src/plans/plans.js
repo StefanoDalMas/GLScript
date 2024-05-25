@@ -4,6 +4,7 @@ import { astar } from "../tools/astar.js"
 import { findBestTile } from '../tools/findBestTile.js';
 import { onlineSolver } from "@unitn-asa/pddl-client";
 import { PDDLProblem } from '../planning/PDDLProblem.js';
+import { client } from '../main.js';
 import fs from 'fs';
 
 class Plan {
@@ -55,9 +56,13 @@ class GoPickUp extends Plan {
     }
 
     async execute(go_pick_up, x, y) {
-        if (this.stopped) throw ['stopped']; // if stopped then quit
-        // await this.subIntention(['go_to', x, y]);
-        await this.subIntention(['pddl_move', x, y]);
+        if (this.stopped) throw ['stopped']; // if stopped then quit)
+        if (client.usingPddl) {
+            await this.subIntention(['pddl_move', x, y]);
+        }
+        else {
+            await this.subIntention(['go_to', x, y]);
+        }
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await global.client.pickup()
         // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== x && item[1] !== y))
@@ -180,8 +185,11 @@ class GoPutDown extends Plan {
         console.log("put_down_in_queue", global.put_down_in_queue)
         global.put_down_in_queue = false;
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        // await this.subIntention(['go_to', x, y]);
-        await this.subIntention(['pddl_move', x, y]);
+        if (client.usingPddl) {
+            await this.subIntention(['pddl_move', x, y]);
+        } else {
+            await this.subIntention(['go_to', x, y]);
+        }
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await global.client.putdown();
         if (status) {
@@ -250,8 +258,29 @@ class RandomMove extends Plan {
                 new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
-            // await this.subIntention(['go_to', new_tile.x, new_tile.y]);
-            await this.subIntention(['pddl_move', new_tile.x, new_tile.y]);
+            if (client.usingPddl) {
+                //since planner is too slow, it is better do directly move to the tile here
+                let status = false;
+                if (new_tile.x == me_x + 1 && new_tile.y == me_y && !global.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
+                    status = await global.client.move('right')
+                } else if (new_tile.x == me_x - 1 && new_tile.y == me_y && !global.deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
+                    status = await global.client.move('left')
+                } else if (new_tile.x == me_x && new_tile.y == me_y + 1 && !global.deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
+                    status = await global.client.move('up')
+                } else if (new_tile.x == me_x && new_tile.y == me_y - 1 && !global.deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
+                    status = await global.client.move('down')
+                }
+                if (status) {
+                    global.me.x = Math.round(status.x);
+                    me_x = global.me.x;
+                    global.me.y = Math.round(status.y);
+                    me_y = global.me.y;
+                } else {
+                    throw ['got blocked by someone, exiting random_move'];
+                }
+            } else {
+                await this.subIntention(['go_to', new_tile.x, new_tile.y]);
+            }
             return true;
 
         } else {
@@ -260,28 +289,46 @@ class RandomMove extends Plan {
     }
 }
 
-class PDDLMove extends Plan{
+class PDDLMove extends Plan {
     static isApplicableTo(pddl_move, x, y) {
         return pddl_move == 'pddl_move';
     }
-    async execute(pddl_move, x, y){
+    async execute(pddl_move, x, y) {
         if (global.me.x != undefined && global.me.y != undefined) {
 
             let me_x = Math.round(global.me.x);
             let me_y = Math.round(global.me.y);
-            
+
             console.log("create PDDL string");
-            let uno = global.deliveroo_graph
-            let due = global.deliveroo_graph.grid[me_x][me_y]
-            let tre = global.deliveroo_graph.grid[x][y]
-            let problem = new PDDLProblem(uno, due, tre);
+            let graph = global.deliveroo_graph
+            let from = global.deliveroo_graph.grid[me_x][me_y]
+            let to = global.deliveroo_graph.grid[x][y]
+            let problem = new PDDLProblem(graph, from, to);
             let problemString = await problem.getProblemString();
             let domainString = fs.readFileSync('./src/planning/deliveroojs.pddl', 'utf8').replace(/\r?\n|\r/g, '').replace(/\s\s+/g, ' ');
-            
+
             console.log("sending to remote solver");
             let plan = await onlineSolver(domainString, problemString);
 
             if (plan) {
+                //since we have to await for the result, we have to check again if 
+                // the parcel was not picked up by someone else 
+                // and if the reward is still positive
+                if (this.parent instanceof GoPickUp) {
+                    let possible_parcel_id = global.parcelLocations[x][y].id;
+                    if (possible_parcel_id) {
+                        let parcel = global.parcels.get(possible_parcel_id);
+                        if (!parcel.carriedBy || parcel.carriedBy === global.me.id) {
+                            let reward = parcel.rewardAfterNSteps(plan.length);
+                            if (reward <= 0) {
+                                throw ['bad reward, exiting'];
+                            }
+                        }
+                        else {
+                            throw ['someone took the parcel, exiting'];
+                        }
+                    }
+                }
                 console.log("unpack plan");
                 let status = false;
                 for (let step of plan) {
@@ -301,7 +348,7 @@ class PDDLMove extends Plan{
                         console.log("move down")
                         status = await global.client.move('down')
                     }
-    
+
                     if (status) {
                         global.me.x = Math.round(status.x);
                         me_x = global.me.x;
@@ -310,8 +357,10 @@ class PDDLMove extends Plan{
                     } else {
                         console.log("blocked")
                         // da decidere cosa fare se provo a muovermi ma qualche infame mi viene davanti e mi blocca
+                        // esce dall'intenzione, verrà visto il nuovo path da fare e si pusha un altro pddl_move
+                        throw ['got blocked by someone, exiting pddl_move'];
                     }
-    
+
                     if (me_x != x || me_y != y) {
                         // se sono su una consegna, consegno
                         if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.me.parcels_on_head > 0) {
@@ -336,6 +385,8 @@ class PDDLMove extends Plan{
             } else {
                 // qua da mettere cosa fare nel caso in cui non viene trovato un plan per andare da qualche parte (non c'è una strada perchè qualcuno in mezzo)
                 console.log("bo")
+                //direi che se non trova nulla, riprova a fare un random move
+                await this.subIntention(['random_move']);
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
 

@@ -156,24 +156,6 @@ class IntentionRevisionQueue extends IntentionRevision {
 
 }
 
-class IntentionRevisionStack extends IntentionRevision {
-
-    async push(predicate) {
-
-        if (predicate) {
-            // console.log("predicate is: ", predicate)
-            // Check if already queued
-            if (this.intention_queue.find((i) => i.predicate.join(' ') == predicate.join(' ')))
-                return; // intention is already queued
-
-            console.log('IntentionRevisionReplace.push', predicate);
-            const intention = new Intention(this, predicate);
-            this.intention_queue.unshift(intention);
-        }
-    }
-
-}
-
 class IntentionRevisionReplace extends IntentionRevision {
 
     async push(predicate) {
@@ -192,19 +174,6 @@ class IntentionRevisionReplace extends IntentionRevision {
         if (last) {
             last.stop();
         }
-    }
-
-}
-
-class IntentionRevisionRevise extends IntentionRevision {
-
-    async push(predicate) {
-        //     console.log('Revising intention queue. Received', ...predicate);
-        //     // TODO
-        //     // - order intentions based on utility function (reward - cost) (for example, parcel score minus distance)
-        //     // - eventually stop current one
-        //     // - evaluate validity of intention
-        // }
     }
 
 }
@@ -229,4 +198,4 @@ class IntentionRevisionMaxHeap extends IntentionRevision {
 
 
 
-export { IntentionRevisionQueue, IntentionRevisionStack, IntentionRevisionReplace, IntentionRevision, IntentionRevisionMaxHeap }
+export { IntentionRevisionQueue, IntentionRevisionReplace, IntentionRevision, IntentionRevisionMaxHeap }

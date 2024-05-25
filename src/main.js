@@ -8,5 +8,6 @@ import { local, remote } from '../config/config.js';
 import { Client } from './classes/client.js'
 
 
-const client = new Client(local);
+const client = new Client(local, true);
 
+export { client }

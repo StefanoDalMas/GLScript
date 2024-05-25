@@ -6,11 +6,12 @@ import { Graph } from '../tools/astar.js';
 import { distance } from '../tools/distance.js';
 
 class Client {
-    constructor(configuration) {
+    constructor(configuration, usingPddl) {
         this.deliverooApi = configuration;
         this.setUpCallbacks();
         this.intentionQueue = new IntentionRevisionMaxHeap();
         this.intentionQueue.loop();
+        this.usingPddl = usingPddl;
     }
 
     setUpCallbacks() {
