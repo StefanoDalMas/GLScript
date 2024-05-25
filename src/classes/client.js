@@ -1,17 +1,26 @@
-import { global } from '../tools/globals.js'
+import { global } from '../tools/globals.js';
 import { IntentionRevisionMaxHeap } from '../intentions/intentionRevision.js';
 import { Parcel } from './parcel.js';
 import { Agent } from './agents.js';
 import { Graph } from '../tools/astar.js';
 import { distance } from '../tools/distance.js';
+import { Message } from '../classes/message.js';
 
 class Client {
-    constructor(configuration, usingPddl) {
+    constructor(configuration, usingPddl, isMaster, secretToken) {
         this.deliverooApi = configuration;
-        this.setUpCallbacks();
         this.intentionQueue = new IntentionRevisionMaxHeap();
-        this.intentionQueue.loop();
         this.usingPddl = usingPddl;
+        this.isMaster = isMaster; // to tell if he is Master or Slave
+        this.secretToken = secretToken;
+    }
+
+    async configure() {
+        this.setUpCallbacks();
+        await this.commTest();
+
+        this.intentionQueue.loop();
+
     }
 
     setUpCallbacks() {
@@ -106,7 +115,7 @@ class Client {
         this.deliverooApi.onParcelsSensing(parcels => {
 
             // TODO revisit beliefset revision so to trigger option generation only in the case a new parcel is observed
-        
+
             /**
              * Options generation
              */
@@ -115,7 +124,7 @@ class Client {
             for (const parcel of parcels.values())
                 if (!parcel.carriedBy)
                     options.push(['go_pick_up', new Parcel(parcel)]);
-        
+
             /**
              * Options filtering (belief filtering)
              */
@@ -133,7 +142,7 @@ class Client {
                     }
                 }
             }
-        
+
             /**
              * Best option is selected
              */
@@ -144,6 +153,23 @@ class Client {
             }
         })
 
+        this.deliverooApi.onMsg((id, name, msg, callbackResponse) => {
+            console.log("received message from ", id, " with content: ", msg)
+            if (!this.isMaster) {
+                if (msg.topic == "AllyGLS") {
+                    console.log("GIELLESSE SRL found an ally!");
+                }
+            }
+        })
+
+    }
+
+    async commTest() {
+        await this.deliverooApi.say('0a8dd3ae6f5', { msg: 'Hello from GIELLESSE!', id: global.me.id })
+        if (this.isMaster) {
+            await this.deliverooApi.shout(new Message("ALLYGLS"))
+        }
+        // await this.deliverooApi.ask('0a8dd3ae6f5', new Message(global.me.id, "superSecretToken!",'0a8dd3ae6f5', 'test', 'Hello from GIELLESSE!'))
     }
 }
 

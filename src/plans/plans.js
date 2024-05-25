@@ -332,7 +332,7 @@ class PDDLMove extends Plan {
                         }
                     }
                 }
-                if (this.parent instanceof GoPutDown){
+                if (this.parent instanceof GoPutDown) {
                     if (global.me.parcels_on_head === 0) {
                         throw ['no parcels on head, exiting'];
                     }

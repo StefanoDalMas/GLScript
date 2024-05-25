@@ -27,7 +27,7 @@ class IntentionRevision {
         while (true) {
 
             // Consumes intention_queue if not empty
-            console.log("dimensione:", this.intention_queue.length)
+            // console.log("dimensione:", this.intention_queue.length)
             console.log("go_put_down_tries = ", global.go_put_down_tries)
             if (this.intention_queue.length > 0) {
                 var result = "";
@@ -41,13 +41,13 @@ class IntentionRevision {
 
                 // [MaxHeap]
                 // console.log('intentionRevision.loop', this.intention_queue.map(i => i.predicate));
-                console.log('intentionRevision.loop', this.intention_queue.toArray().map(i => i.predicate));
+                // console.log('intentionRevision.loop', this.intention_queue.toArray().map(i => i.predicate));
 
                 // -----------
-                console.log("n_paracels >= maxPickedParacels: ", global.me.parcels_on_head >= global.MAX_PICKED_PARCELS)
-                console.log("put_down_in_queue: ", global.put_down_in_queue)
-                console.log("me.x && me.y: ", global.me.x && global.me.y)
-                console.log("go_put_down_tries < 10: ", global.go_put_down_tries < 10)
+                // console.log("n_paracels >= maxPickedParacels: ", global.me.parcels_on_head >= global.MAX_PICKED_PARCELS)
+                // console.log("put_down_in_queue: ", global.put_down_in_queue)
+                // console.log("me.x && me.y: ", global.me.x && global.me.y)
+                // console.log("go_put_down_tries < 10: ", global.go_put_down_tries < 10)
                 // -----------
                 if (global.me.parcels_on_head >= global.MAX_PICKED_PARCELS && !global.put_down_in_queue && global.me.x && global.me.y && global.go_put_down_tries < 10) {
 
