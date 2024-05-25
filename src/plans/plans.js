@@ -319,7 +319,8 @@ class PDDLMove extends Plan {
                     if (possible_parcel_id) {
                         let parcel = global.parcels.get(possible_parcel_id);
                         if (!parcel.carriedBy || parcel.carriedBy === global.me.id) {
-                            let reward = parcel.rewardAfterNSteps(plan.length);
+                            let delta_seconds = Date.now() - parcel.timestamp;
+                            let reward = parcel.rewardAfterNSeconds(delta_seconds / 1000);
                             if (reward <= 0) {
                                 throw ['bad reward, exiting'];
                             }
@@ -327,6 +328,11 @@ class PDDLMove extends Plan {
                         else {
                             throw ['someone took the parcel, exiting'];
                         }
+                    }
+                }
+                if (this.parent instanceof GoPutDown){
+                    if (global.me.parcels_on_head === 0) {
+                        throw ['no parcels on head, exiting'];
                     }
                 }
                 console.log("unpack plan");
