@@ -17,14 +17,14 @@ class Client {
     }
 
     async configure() {
-        this.setUpCallbacks();
+        await this.setUpCallbacks();
         await this.commTest();
 
         this.intentionQueue.loop();
 
     }
 
-    setUpCallbacks() {
+    async setUpCallbacks() {
         this.deliverooApi.onConfig(config => {
             console.log("config", config)
             // global.PARCELS_OBSERVATION_DISTANCE = config.PARCELS_OBSERVATION_DISTANCE
@@ -154,12 +154,19 @@ class Client {
             }
         })
 
-        this.deliverooApi.onMsg((id, name, msg, callbackResponse) => {
+        this.deliverooApi.onMsg(async (id, name, msg, callbackResponse) => {
             console.log("received message from ", id, " with content: ", msg)
             if (!this.isMaster) {
-                if (msg.topic == "ALLYGLS") {
+                if (msg.topic == "ALLYGLS?") {
                     console.log("GIELLESSE SRL found an ally!");
                     this.allyList.add(id);
+                    await this.deliverooApi.say(id, new Message("ALLYGLS!", this.secretToken, id, "I'm the slave! :)"));
+                }
+            } else {
+                if (msg.topic == "ALLYGLS!") {
+                    console.log("GIELLESSE SRL found an ally!");
+                    this.allyList.add(id);
+                    await this.deliverooApi.say(id, new Message("ALLYGLS!", this.secretToken, id, "I'm the master! :)"));
                 }
             }
         })
@@ -167,9 +174,8 @@ class Client {
     }
 
     async commTest() {
-        await this.deliverooApi.say('0a8dd3ae6f5', { msg: 'Hello from GIELLESSE!', id: global.me.id })
         if (this.isMaster) {
-            await this.deliverooApi.shout(new Message("ALLYGLS"))
+            await this.deliverooApi.shout(new Message("ALLYGLS?"))
         }
         // await this.deliverooApi.ask('0a8dd3ae6f5', new Message(global.me.id, "superSecretToken!",'0a8dd3ae6f5', 'test', 'Hello from GIELLESSE!'))
     }
