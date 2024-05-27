@@ -25,6 +25,9 @@ intentions implementations:
     + random move: sceglie tile camminabile a distanza 1 e ci va (con astar ma l'è stesso)
 
 TODO NOW
+- Planner : 
+    - a volte fa cose stupide anche con i controlli(va verso pacchetti che dovrebbero avere rewardafterNsteps < 0, non
+    ricontrolla i valori dopo aver ricevuto la risposta...)
 - Comunicazione :
     - iniziare con handshake(A shout "ally?"+ payload e B risponde con il suo)
         - agente A fa shout {"AllyGLS?", agent.id}

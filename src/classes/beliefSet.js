@@ -16,5 +16,5 @@ class BeliefSet {
     }
 }
 
-let beliefSet = new BeliefSet();
-export { beliefSet };
+
+export { BeliefSet };

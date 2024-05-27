@@ -1,4 +1,3 @@
-import { beliefSet } from "./beliefSet.js";
 import { consts } from "../classes/consts.js";
 
 

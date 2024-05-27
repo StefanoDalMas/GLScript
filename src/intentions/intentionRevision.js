@@ -1,10 +1,10 @@
 import { Intention } from './intention.js';
 import { findBestTile } from '../tools/findBestTile.js';
-import { beliefSet } from '../classes/beliefSet.js';
 import { consts } from '../classes/consts.js';
 import { Parcel } from '../classes/parcel.js';
 import { MaxHeap } from '../tools/maxHeap.js';
 import { distance } from '../tools/distance.js';
+import { client } from '../main.js';
 
 
 class IntentionRevision {
@@ -45,18 +45,18 @@ class IntentionRevision {
                 // console.log('intentionRevision.loop', this.intention_queue.toArray().map(i => i.predicate));
 
                 // -----------
-                // console.log("n_paracels >= maxPickedParacels: ", beliefSet.me.parcels_on_head >= consts.MAX_PICKED_PARCELS)
+                // console.log("n_paracels >= maxPickedParacels: ", client.beliefSet.me.parcels_on_head >= consts.MAX_PICKED_PARCELS)
                 // console.log("put_down_in_queue: ", consts.put_down_in_queue)
-                // console.log("me.x && me.y: ", beliefSet.me.x && beliefSet.me.y)
+                // console.log("me.x && me.y: ", client.beliefSet.me.x && client.beliefSet.me.y)
                 // console.log("go_put_down_tries < 10: ", consts.go_put_down_tries < 10)
                 // -----------
-                if (beliefSet.me.parcels_on_head >= consts.MAX_PICKED_PARCELS && !consts.put_down_in_queue && beliefSet.me.x && beliefSet.me.y && consts.go_put_down_tries < 10) {
+                if (client.beliefSet.me.parcels_on_head >= consts.MAX_PICKED_PARCELS && !consts.put_down_in_queue && client.beliefSet.me.x && client.beliefSet.me.y && consts.go_put_down_tries < 10) {
 
 
                     /**
                      * Options filtering (trovo la tile di consegnap più vicina)
                     */
-                    let best_option = findBestTile(beliefSet.delivery_tiles);
+                    let best_option = findBestTile(client.beliefSet.delivery_tiles);
 
                     if (best_option) {
                         consts.go_put_down_tries += 1;
@@ -73,12 +73,12 @@ class IntentionRevision {
                 // Is queued intention still valid? Do I still want to achieve it?
                 if (intention.predicate[0] === 'go_pick_up') {
                     let id = intention.predicate[3]
-                    let p = beliefSet.parcels.get(id);
+                    let p = client.beliefSet.parcels.get(id);
                     let seconds_passed = (Date.now() - p.timestamp) / 1000;
                     let guessed_reward = p.rewardAfterNSeconds(seconds_passed);
 
                     //parcelLocations lo settiamo mai a 0?
-                    if (p && p.carriedBy || beliefSet.parcelLocations[p.x][p.y].present == 0 || guessed_reward <= 0) {
+                    if (p && p.carriedBy || client.beliefSet.parcelLocations[p.x][p.y].present == 0 || guessed_reward <= 0) {
                         console.log('Skipping intention because no more valid', intention.predicate)
                         // [MaxHeap]
                         // this.intention_queue.shift();
@@ -97,13 +97,13 @@ class IntentionRevision {
                 // [MaxHeap]
                 // this.intention_queue.shift();
 
-            } else if (beliefSet.me.parcels_on_head && consts.go_put_down_tries < 10 && !consts.put_down_in_queue) {
+            } else if (client.beliefSet.me.parcels_on_head && consts.go_put_down_tries < 10 && !consts.put_down_in_queue) {
 
 
                 /**
                  * Options filtering (trovo la tile di consegnap più vicina)
                 */
-                let best_option = findBestTile(beliefSet.delivery_tiles);
+                let best_option = findBestTile(client.beliefSet.delivery_tiles);
                 if (best_option) {
                     consts.go_put_down_tries += 1;
                     this.push(['go_put_down', best_option[0], best_option[1]]);

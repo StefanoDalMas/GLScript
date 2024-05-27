@@ -5,7 +5,7 @@
 // Includes Binary Heap (with modifications) from Marijn Haverbeke.
 // http://eloquentjavascript.net/appendix2.html
 // (function (definition) {
-//     /* beliefSet module, define */
+//     /* global module, define */
 //     if (typeof module === 'object' && typeof module.exports === 'object') {
 //         module.exports = definition();
 //     } else if (typeof define === 'function' && define.amd) {

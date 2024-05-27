@@ -1,6 +1,3 @@
-import { beliefSet } from "./beliefSet.js";
-
-
 class Agent {
     constructor(agent) {
         this.id = agent.id;

@@ -1,4 +1,3 @@
-import { beliefSet } from './beliefSet.js';
 import { consts } from './consts.js';
 import { IntentionRevisionMaxHeap } from '../intentions/intentionRevision.js';
 import { Parcel } from './parcel.js';
@@ -6,6 +5,7 @@ import { Agent } from './agents.js';
 import { Graph } from '../tools/astar.js';
 import { distance } from '../tools/distance.js';
 import { Message } from '../classes/message.js';
+import { BeliefSet } from './beliefSet.js';
 
 class Client {
     constructor(configuration, usingPddl, isMaster, secretToken) {
@@ -14,6 +14,7 @@ class Client {
         this.isMaster = isMaster; // to tell if he is Master or Slave
         this.secretToken = secretToken;
         this.intentionQueue = new IntentionRevisionMaxHeap();
+        this.beliefSet = new BeliefSet();
         this.allyList = new Set();
     }
 
@@ -28,7 +29,7 @@ class Client {
     async setUpCallbacks() {
         this.deliverooApi.onConfig(config => {
             console.log("config", config)
-            // beliefSet.PARCELS_OBSERVATION_DISTANCE = config.PARCELS_OBSERVATION_DISTANCE
+            // this.beliefSet.PARCELS_OBSERVATION_DISTANCE = config.PARCELS_OBSERVATION_DISTANCE
             consts.CLOCK = config.CLOCK
             consts.MOVEMENT_STEPS = config.MOVEMENT_STEPS
             consts.MOVEMENT_DURATION = config.MOVEMENT_DURATION
@@ -44,29 +45,29 @@ class Client {
             let deliveroo_map = [];
             for (let i = 0; i < width; i++) {
                 deliveroo_map[i] = [];
-                beliefSet.parcelLocations[i] = [];
+                this.beliefSet.parcelLocations[i] = [];
                 for (let j = 0; j < height; j++) {
                     deliveroo_map[i][j] = 0;
-                    beliefSet.parcelLocations[i][j] = { present: 0, id: undefined };
+                    this.beliefSet.parcelLocations[i][j] = { present: 0, id: undefined };
                 }
             }
 
             tiles.forEach(tile => {
                 deliveroo_map[tile.x][tile.y] = 1;
                 if (tile.delivery) {
-                    beliefSet.delivery_tiles.push([tile.x, tile.y]);
+                    this.beliefSet.delivery_tiles.push([tile.x, tile.y]);
                 }
                 if (tile.parcelSpawner) {
-                    beliefSet.spawning_tiles.push([tile.x, tile.y]);
+                    this.beliefSet.spawning_tiles.push([tile.x, tile.y]);
                 }
             });
 
-            if (beliefSet.spawning_tiles.length === tiles.length - beliefSet.delivery_tiles.length) {
-                beliefSet.all_spawning = true;
+            if (this.beliefSet.spawning_tiles.length === tiles.length - this.beliefSet.delivery_tiles.length) {
+                this.beliefSet.all_spawning = true;
             }
 
-            beliefSet.deliveroo_graph = new Graph(deliveroo_map);
-            beliefSet.deliveroo_map = deliveroo_map;
+            this.beliefSet.deliveroo_graph = new Graph(deliveroo_map);
+            this.beliefSet.deliveroo_map = deliveroo_map;
             consts.MAX_HEIGHT = MAX_HEIGHT;
             consts.MAX_WIDTH = MAX_WIDTH;
         })
@@ -75,44 +76,44 @@ class Client {
             //     //for each agent that I see, set the old location and the new location
             //     // if it is the first time I see the agent, the old location is the same as the new location
             agents.forEach(agent => {
-                beliefSet.agentsLocations.set(agent.id, new Agent(agent));
+                this.beliefSet.agentsLocations.set(agent.id, new Agent(agent));
             })
             // For now I only set wall to the agents that I actually see
             for (let i = 0; i < consts.MAX_WIDTH; i++) {
                 for (let j = 0; j < consts.MAX_HEIGHT; j++) {
-                    if (beliefSet.deliveroo_map[i][j] == 1) {
-                        beliefSet.deliveroo_graph.setWalkable(i, j);
+                    if (this.beliefSet.deliveroo_map[i][j] == 1) {
+                        this.beliefSet.deliveroo_graph.setWalkable(i, j);
                     }
                 }
             }
             //has to be changed!
             agents.forEach(agent => {
                 let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
-                beliefSet.deliveroo_graph.setWall(new_location.x, new_location.y);
+                this.beliefSet.deliveroo_graph.setWall(new_location.x, new_location.y);
             })
         })
         this.deliverooApi.onYou(({ id, name, x, y, score }) => {
-            beliefSet.me.id = id
-            beliefSet.me.name = name
-            beliefSet.me.x = Math.round(x)
-            beliefSet.me.y = Math.round(y)
-            beliefSet.me.score = score
+            this.beliefSet.me.id = id
+            this.beliefSet.me.name = name
+            this.beliefSet.me.x = Math.round(x)
+            this.beliefSet.me.y = Math.round(y)
+            this.beliefSet.me.score = score
         })
 
         this.deliverooApi.onParcelsSensing(async (perceived_parcels) => {
             let counter = 0
             for (const p of perceived_parcels) {
-                beliefSet.parcels.set(p.id, new Parcel(p))
+                this.beliefSet.parcels.set(p.id, new Parcel(p))
                 if (!p.carriedBy && p.reward > 0) {
-                    beliefSet.parcelLocations[p.x][p.y] = { present: 1, id: p.id }
+                    this.beliefSet.parcelLocations[p.x][p.y] = { present: 1, id: p.id }
                 }
                 else {
-                    if (p.carriedBy === beliefSet.me.id) {
+                    if (p.carriedBy === this.beliefSet.me.id) {
                         counter += 1;
                     }
                 }
             }
-            beliefSet.me.parcels_on_head = counter;
+            this.beliefSet.me.parcels_on_head = counter;
         })
         this.deliverooApi.onParcelsSensing(parcels => {
 
@@ -136,7 +137,7 @@ class Client {
                 //check if option is in intention_queue
                 if (option[0] == 'go_pick_up' && !this.intentionQueue.find((i) => i.predicate.join(' ') == option.join(' '))) {
                     let parcel = option[1];
-                    let current_d = distance(parcel.getLocation(), beliefSet.me);
+                    let current_d = distance(parcel.getLocation(), this.beliefSet.me);
                     let current_reward = parcel.rewardAfterNSteps(current_d);
                     if (current_reward > 0 && current_reward > reward) {
                         best_option = option
@@ -178,7 +179,7 @@ class Client {
         if (this.isMaster) {
             await this.deliverooApi.shout(new Message("ALLYGLS?"))
         }
-        // await this.deliverooApi.ask('0a8dd3ae6f5', new Message(beliefSet.me.id, "superSecretToken!",'0a8dd3ae6f5', 'test', 'Hello from GIELLESSE!'))
+        // await this.deliverooApi.ask('0a8dd3ae6f5', new Message(this.beliefSet.me.id, "superSecretToken!",'0a8dd3ae6f5', 'test', 'Hello from GIELLESSE!'))
     }
 }
 
