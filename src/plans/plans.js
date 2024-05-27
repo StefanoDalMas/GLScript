@@ -57,14 +57,14 @@ class GoPickUp extends Plan {
 
     async execute(go_pick_up, x, y) {
         if (this.stopped) throw ['stopped']; // if stopped then quit)
-        if (client.usingPddl) {
+        if (client.deliverooApi.usingPddl) {
             await this.subIntention(['pddl_move', x, y]);
         }
         else {
             await this.subIntention(['go_to', x, y]);
         }
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        let status = await global.client.pickup()
+        let status = await client.deliverooApi.pickup()
         // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== x && item[1] !== y))
         if (status) {
             global.parcelLocations[x][y] = { location: 0, id: undefined };
@@ -123,13 +123,13 @@ class GoTo extends Plan {
                 //evaluate if it is a up, down, left or right move
                 //TODO using global.deliveroo_graph.neighbors()???
                 if (next_tile.x == me_x + 1 && next_tile.y == me_y && !global.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
-                    status = await global.client.move('right')
+                    status = await client.deliverooApi.move('right')
                 } else if (next_tile.x == me_x - 1 && next_tile.y == me_y && !global.deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
-                    status = await global.client.move('left')
+                    status = await client.deliverooApi.move('left')
                 } else if (next_tile.x == me_x && next_tile.y == me_y + 1 && !global.deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
-                    status = await global.client.move('up')
+                    status = await client.deliverooApi.move('up')
                 } else if (next_tile.x == me_x && next_tile.y == me_y - 1 && !global.deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
-                    status = await global.client.move('down')
+                    status = await client.deliverooApi.move('down')
                 }
                 if (status) {
                     global.me.x = Math.round(status.x);
@@ -148,7 +148,7 @@ class GoTo extends Plan {
                 if (me_x != x || me_y != y) {
                     // se sono su una consegna, consegno
                     if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.me.parcels_on_head > 0) {
-                        let status = await global.client.putdown();
+                        let status = await client.deliverooApi.putdown();
                         if (status) {
                             global.me.parcels_on_head = 0;
                         }
@@ -158,7 +158,7 @@ class GoTo extends Plan {
                     // if (global.parcelLocations.some(arr => arr[0] === global.me.x && arr[1] === global.me.y)){
                     if (global.parcelLocations[me_x][me_y].present == 1) {
                         console.log("provo a tirar su con MOVE")
-                        let status = await global.client.pickup()
+                        let status = await client.deliverooApi.pickup()
                         // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== global.me.x && item[1] !== global.me.y))
                         if (status) {
                             global.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
@@ -185,13 +185,13 @@ class GoPutDown extends Plan {
         console.log("put_down_in_queue", global.put_down_in_queue)
         global.put_down_in_queue = false;
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        if (client.usingPddl) {
+        if (client.deliverooApi.usingPddl) {
             await this.subIntention(['pddl_move', x, y]);
         } else {
             await this.subIntention(['go_to', x, y]);
         }
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        let status = await global.client.putdown();
+        let status = await client.deliverooApi.putdown();
         if (status) {
             global.go_put_down_tries = 0;
             global.me.parcels_on_head = 0;
@@ -258,17 +258,17 @@ class RandomMove extends Plan {
                 new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
-            if (client.usingPddl) {
+            if (client.deliverooApi.usingPddl) {
                 //since planner is too slow, it is better do directly move to the tile here
                 let status = false;
                 if (new_tile.x == me_x + 1 && new_tile.y == me_y && !global.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
-                    status = await global.client.move('right')
+                    status = await client.deliverooApi.move('right')
                 } else if (new_tile.x == me_x - 1 && new_tile.y == me_y && !global.deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
-                    status = await global.client.move('left')
+                    status = await client.deliverooApi.move('left')
                 } else if (new_tile.x == me_x && new_tile.y == me_y + 1 && !global.deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
-                    status = await global.client.move('up')
+                    status = await client.deliverooApi.move('up')
                 } else if (new_tile.x == me_x && new_tile.y == me_y - 1 && !global.deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
-                    status = await global.client.move('down')
+                    status = await client.deliverooApi.move('down')
                 }
                 if (status) {
                     global.me.x = Math.round(status.x);
@@ -342,19 +342,19 @@ class PDDLMove extends Plan {
                 for (let step of plan) {
                     if (step.action == 'move_right') {
                         console.log("move right")
-                        status = await global.client.move('right')
+                        status = await client.deliverooApi.move('right')
                     }
                     if (step.action == 'move_left') {
                         console.log("move left")
-                        status = await global.client.move('left')
+                        status = await client.deliverooApi.move('left')
                     }
                     if (step.action == 'move_up') {
                         console.log("move up")
-                        status = await global.client.move('up')
+                        status = await client.deliverooApi.move('up')
                     }
                     if (step.action == 'move_down') {
                         console.log("move down")
-                        status = await global.client.move('down')
+                        status = await client.deliverooApi.move('down')
                     }
 
                     if (status) {
@@ -372,7 +372,7 @@ class PDDLMove extends Plan {
                     if (me_x != x || me_y != y) {
                         // se sono su una consegna, consegno
                         if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.me.parcels_on_head > 0) {
-                            let status = await global.client.putdown();
+                            let status = await client.deliverooApi.putdown();
                             if (status) {
                                 global.me.parcels_on_head = 0;
                             }
@@ -382,7 +382,7 @@ class PDDLMove extends Plan {
                         // if (global.parcelLocations.some(arr => arr[0] === global.me.x && arr[1] === global.me.y)){
                         if (global.parcelLocations[me_x][me_y].present == 1) {
                             console.log("provo a tirar su con MOVE")
-                            let status = await global.client.pickup()
+                            let status = await client.deliverooApi.pickup()
                             // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== global.me.x && item[1] !== global.me.y))
                             if (status) {
                                 global.parcelLocations[me_x][me_y] = { location: 0, id: undefined };

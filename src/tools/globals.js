@@ -3,9 +3,6 @@ import { local, remote } from '../../config/config.js';
 //make Global contain put_down_in_queue and go_put_down_tries
 class Global {
     constructor() {
-        this.client = local;
-
-
         this.put_down_in_queue = false;
         this.go_put_down_tries = 0;
         this.MAX_QUEUE_SIZE = 3;

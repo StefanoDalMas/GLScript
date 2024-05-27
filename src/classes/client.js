@@ -9,10 +9,11 @@ import { Message } from '../classes/message.js';
 class Client {
     constructor(configuration, usingPddl, isMaster, secretToken) {
         this.deliverooApi = configuration;
-        this.intentionQueue = new IntentionRevisionMaxHeap();
         this.usingPddl = usingPddl;
         this.isMaster = isMaster; // to tell if he is Master or Slave
         this.secretToken = secretToken;
+        this.intentionQueue = new IntentionRevisionMaxHeap();
+        this.allyList = new Set();
     }
 
     async configure() {
@@ -156,8 +157,9 @@ class Client {
         this.deliverooApi.onMsg((id, name, msg, callbackResponse) => {
             console.log("received message from ", id, " with content: ", msg)
             if (!this.isMaster) {
-                if (msg.topic == "AllyGLS") {
+                if (msg.topic == "ALLYGLS") {
                     console.log("GIELLESSE SRL found an ally!");
+                    this.allyList.add(id);
                 }
             }
         })
