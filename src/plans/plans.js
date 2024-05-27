@@ -366,15 +366,14 @@ class PDDLMove extends Plan {
                         throw ['no parcels on head, exiting'];
                     }
                     else {
-                        let rewardArray = [];
+                        let finalReward = 0;
                         let carriedParcels = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
 
                         for (let parcel of carriedParcels) {
-                            let delta_seconds = Date.now() - parcel.timestamp;
-                            rewardArray.push(parcel.rewardAfterNSeconds(delta_seconds / 1000));
+                            let reward = parcel.rewardAfterNSteps(path.length);
+                            finalReward += reward;
                         }
-                        let expectedReward = rewardArray.reduce((a, b) => a + b, 0);
-                        if (expectedReward <= 0) {
+                        if (finalReward <= 0) {
                             throw ['reward is not good anymore, exiting'];
                         }
                     }
@@ -434,13 +433,22 @@ class PDDLMove extends Plan {
                 }
             } else {
                 // qua da mettere cosa fare nel caso in cui non viene trovato un plan per andare da qualche parte (non c'è una strada perchè qualcuno in mezzo)
-                console.log("bo")
                 //direi che se non trova nulla, riprova a fare un random move
-                await this.subIntention(['random_move']);
+                throw ['no plan found, exiting'];
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
 
         }
+    }
+}
+
+class CollaborationDelivery extends Plan {
+    static isApplicableTo(collaboration_delivery, x, y){
+        return collaboration_delivery == 'collaboration_delivery';
+    }
+    async execute(){
+        // TODO
+        // l'altro mi ha detto ""
     }
 }
 

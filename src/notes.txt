@@ -26,16 +26,25 @@ intentions implementations:
 
 TODO NOW
 
+Nell'agent sensing aggiornare sempre valore dell'alleato, se vedo che è troppo vecchio glielo chiedo(?)
+
 - Comunicazione :
     - onParcel/Agent Sensing inviarsi i dati ed aggiornarli
-    - capire che fare con i dati / inventarsi logica utilizzando Master - Slave concept
-        - master chiede allo slave quanto punteggio prenderebbe a prendere un pacco se è comune e si decide così
+    - Inserire OGNI PLAN MSG con priorità più alta
+    - consegna condivisa:
+        - NELLA GENERAZIONE DELLA PUT DOWN (quando genero l'idea di pushare nella intentionQueue)
+        - se nelle putdown non trovo un percorso viabile (e se vedo l'alleato) inizio il protocollo di consegna:
+            -   domando quanti punti farebbe se potesse consegnare
+            -   risponde il suo valore, se è maggiore del mio(se sono bloccato vale 0) decidiamo il meetup point
+                (facendo attenzione al caso in cui si bloccano -- ho appena preso il pacco e l'altro mi è affianco)
+            -   entrambi nel onMsgHandler pushano come plan Coordinated(vai a + putdown/pickup) con priorità alta
     Strategie "anti-agent":
         - brute force agli altri agenti(?) + 1 esame
         - slave fa blocking se non ha niente da fare(?)
 
 - Planner : 
     - rendere funzioni il codice che è copiato nei plan(vedi PDDLMove...)
+    - controllare perchè crasha quando si muove e trova un tipo davanti
 
 fine
 

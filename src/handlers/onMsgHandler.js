@@ -15,6 +15,10 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
             await deliverooApi.say(id, new Message("ALLYGLS!", secretToken, id, "I'm the master! :)"));
         }
     }
+    if (msg.topic == "CollaborationDelivery") {
+        console.log("collaboration delivery started");
+        //push custom plan with goTo -> MAX PRIORITY
+    }
 }
 
 export { onMsgHandler }

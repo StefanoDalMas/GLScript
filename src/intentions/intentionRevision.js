@@ -62,6 +62,13 @@ class IntentionRevision {
                         this.push(['go_put_down', best_option[0], best_option[1]]);
                         consts.put_down_in_queue = true;
                     }
+                } else if (consts.go_put_down_tries == 10) {
+                    //try the communication protocol
+                    //TODO 
+                    //domanda all'altro quanto ha di reward
+                    //se ha più reward di me, gli do il mio pacchetto
+                    //capire come trovare il luogo di consegna
+                    this.push
                 }
 
                 // Current intention
