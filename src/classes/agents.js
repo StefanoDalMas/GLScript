@@ -1,4 +1,4 @@
-import { global } from "../tools/globals.js";
+import { beliefSet } from "./beliefSet.js";
 
 
 class Agent {

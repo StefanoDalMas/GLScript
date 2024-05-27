@@ -1,4 +1,5 @@
-import { global } from "../tools/globals.js";
+import { beliefSet } from "./beliefSet.js";
+import { consts } from "../classes/consts.js";
 
 
 class Parcel {
@@ -11,14 +12,14 @@ class Parcel {
         this.timestamp = Date.now();
     }
     rewardAfterNSteps(steps) {
-        if (steps === 0){
+        if (steps === 0) {
             return this.reward;
         }
-        if (!global.decaying_active()) {
+        if (!consts.decayingActive()) {
             return this.reward;
         }
-        let secondsPassing = (steps / global.MOVEMENT_STEPS) * (global.MOVEMENT_DURATION / 1000);
-        switch (global.PARCEL_DECADING_INTERVAL) {
+        let secondsPassing = (steps / consts.MOVEMENT_STEPS) * (consts.MOVEMENT_DURATION / 1000);
+        switch (consts.PARCEL_DECADING_INTERVAL) {
             case "1s":
                 return this.reward - Math.round(secondsPassing);
             case "2s":
@@ -31,15 +32,15 @@ class Parcel {
                 return this.reward;
         }
     }
-    
-    rewardAfterNSeconds(seconds){
-        if(seconds === 0){
+
+    rewardAfterNSeconds(seconds) {
+        if (seconds === 0) {
             return this.reward;
         }
-        if (!global.decaying_active()) {
+        if (!consts.decayingActive()) {
             return this.reward;
         }
-        switch (global.PARCEL_DECADING_INTERVAL) {
+        switch (consts.PARCEL_DECADING_INTERVAL) {
             case "1s":
                 return this.reward - Math.round(seconds);
             case "2s":
@@ -54,11 +55,11 @@ class Parcel {
     }
 
 
-    getLocation(){
-        return {x: this.x, y: this.y};
+    getLocation() {
+        return { x: this.x, y: this.y };
     }
 
-    intoPredicate(intention){
+    intoPredicate(intention) {
         return [intention, this.x, this.y, this.id];
     }
 

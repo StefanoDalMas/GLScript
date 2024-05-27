@@ -1,7 +1,7 @@
 import { Graph } from "./tools/astar.js"
 import { distance } from "./tools/distance.js"
 import { IntentionRevisionQueue, IntentionRevisionMaxHeap } from "./intentions/intentionRevision.js";
-import { global } from "./tools/globals.js"
+import { beliefSet } from "./classes/beliefSet.js"
 import { Parcel } from './classes/parcel.js';
 import { Agent } from './classes/agents.js';
 import { local, remote, local2 } from '../config/config.js';

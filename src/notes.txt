@@ -39,8 +39,6 @@ TODO NOW
     
     
 - Refactor : 
-    - Global dovrà diventare BeliefSet
-    - Tutte le cose che vengono utilizzate come parametri diventeranno un'altra classe tipo Params o Config o qualcosa del genere
     - Mettere le Callback come file singoli(?)
 
 

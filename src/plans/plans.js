@@ -1,5 +1,6 @@
 import { Intention } from '../intentions/intention.js';
-import { global } from '../tools/globals.js';
+import { beliefSet } from '../classes/beliefSet.js';
+import { consts } from '../classes/consts.js';
 import { astar } from "../tools/astar.js"
 import { findBestTile } from '../tools/findBestTile.js';
 import { onlineSolver } from "@unitn-asa/pddl-client";
@@ -57,7 +58,7 @@ class GoPickUp extends Plan {
 
     async execute(go_pick_up, x, y) {
         if (this.stopped) throw ['stopped']; // if stopped then quit)
-        if (client.deliverooApi.usingPddl) {
+        if (client.usingPddl) {
             await this.subIntention(['pddl_move', x, y]);
         }
         else {
@@ -65,9 +66,9 @@ class GoPickUp extends Plan {
         }
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await client.deliverooApi.pickup()
-        // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== x && item[1] !== y))
+        // beliefSet.parcelLocations = beliefSet.parcelLocations.filter(item => !(item[0] !== x && item[1] !== y))
         if (status) {
-            global.parcelLocations[x][y] = { location: 0, id: undefined };
+            beliefSet.parcelLocations[x][y] = { location: 0, id: undefined };
             console.log("provo a tirar su con PICK UP")
             if (this.stopped) throw ['stopped']; // if stopped then quit
             return true;
@@ -86,15 +87,15 @@ class GoTo extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
 
         //follow path until destination is reached
-        let me_x = Math.round(global.me.x);
-        let me_y = Math.round(global.me.y);
+        let me_x = Math.round(beliefSet.me.x);
+        let me_y = Math.round(beliefSet.me.y);
         while (me_x != x || me_y != y) {
-            if (global.deliveroo_graph.getNode(x, y).isWall() || global.deliveroo_graph.getNode(me_x, me_y).isWall()) {
+            if (beliefSet.deliveroo_graph.getNode(x, y).isWall() || beliefSet.deliveroo_graph.getNode(me_x, me_y).isWall()) {
                 this.log('stucked, walking to wall');
                 throw ['stucked', 'walking to wall'];
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
-            let path = astar.search(global.deliveroo_graph, global.deliveroo_graph.grid[me_x][me_y], global.deliveroo_graph.grid[x][y]);
+            let path = astar.search(beliefSet.deliveroo_graph, beliefSet.deliveroo_graph.grid[me_x][me_y], beliefSet.deliveroo_graph.grid[x][y]);
             if (path.length === 0) {
                 this.log('stucked, no path foound');
                 throw ['stucked', 'no path foound'];
@@ -102,16 +103,16 @@ class GoTo extends Plan {
             let blocked = false;
             for (let index = 0; index < path.length && !blocked; index++) {
                 if (this.parent instanceof GoPickUp) {
-                    let possible_parcel_id = global.parcelLocations[x][y].id;
+                    let possible_parcel_id = beliefSet.parcelLocations[x][y].id;
                     if (possible_parcel_id) {
-                        let parcel = global.parcels.get(possible_parcel_id);
-                        if (parcel.carriedBy && parcel.carriedBy !== global.me.id) {
+                        let parcel = beliefSet.parcels.get(possible_parcel_id);
+                        if (parcel.carriedBy && parcel.carriedBy !== beliefSet.me.id) {
                             throw ['someone took the parcel, exiting'];
                         }
                     }
                 }
                 if (this.parent instanceof GoPutDown) {
-                    if (global.me.parcels_on_head === 0) {
+                    if (beliefSet.me.parcels_on_head === 0) {
                         throw ['no parcels on head, exiting'];
                     }
                 }
@@ -121,21 +122,21 @@ class GoTo extends Plan {
                 let status = false;
                 let next_tile = path[index];
                 //evaluate if it is a up, down, left or right move
-                //TODO using global.deliveroo_graph.neighbors()???
-                if (next_tile.x == me_x + 1 && next_tile.y == me_y && !global.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
+                //TODO using beliefSet.deliveroo_graph.neighbors()???
+                if (next_tile.x == me_x + 1 && next_tile.y == me_y && !beliefSet.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
                     status = await client.deliverooApi.move('right')
-                } else if (next_tile.x == me_x - 1 && next_tile.y == me_y && !global.deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
+                } else if (next_tile.x == me_x - 1 && next_tile.y == me_y && !beliefSet.deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
                     status = await client.deliverooApi.move('left')
-                } else if (next_tile.x == me_x && next_tile.y == me_y + 1 && !global.deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
+                } else if (next_tile.x == me_x && next_tile.y == me_y + 1 && !beliefSet.deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
                     status = await client.deliverooApi.move('up')
-                } else if (next_tile.x == me_x && next_tile.y == me_y - 1 && !global.deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
+                } else if (next_tile.x == me_x && next_tile.y == me_y - 1 && !beliefSet.deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
                     status = await client.deliverooApi.move('down')
                 }
                 if (status) {
-                    global.me.x = Math.round(status.x);
-                    me_x = global.me.x;
-                    global.me.y = Math.round(status.y);
-                    me_y = global.me.y;
+                    beliefSet.me.x = Math.round(status.x);
+                    me_x = beliefSet.me.x;
+                    beliefSet.me.y = Math.round(status.y);
+                    me_y = beliefSet.me.y;
                 } else {
                     blocked = true;
                     // TODO logica del riprovare il percorso
@@ -147,21 +148,21 @@ class GoTo extends Plan {
 
                 if (me_x != x || me_y != y) {
                     // se sono su una consegna, consegno
-                    if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.me.parcels_on_head > 0) {
+                    if (beliefSet.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && beliefSet.me.parcels_on_head > 0) {
                         let status = await client.deliverooApi.putdown();
                         if (status) {
-                            global.me.parcels_on_head = 0;
+                            beliefSet.me.parcels_on_head = 0;
                         }
                     }
                     if (this.stopped) throw ['stopped']; // if stopped then quit
                     // if I pass on a parcel, I pick it up and remove it from belief set
-                    // if (global.parcelLocations.some(arr => arr[0] === global.me.x && arr[1] === global.me.y)){
-                    if (global.parcelLocations[me_x][me_y].present == 1) {
+                    // if (beliefSet.parcelLocations.some(arr => arr[0] === beliefSet.me.x && arr[1] === beliefSet.me.y)){
+                    if (beliefSet.parcelLocations[me_x][me_y].present == 1) {
                         console.log("provo a tirar su con MOVE")
                         let status = await client.deliverooApi.pickup()
-                        // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== global.me.x && item[1] !== global.me.y))
+                        // beliefSet.parcelLocations = beliefSet.parcelLocations.filter(item => !(item[0] !== beliefSet.me.x && item[1] !== beliefSet.me.y))
                         if (status) {
-                            global.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
+                            beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
                         }
                     }
                 }
@@ -182,10 +183,10 @@ class GoPutDown extends Plan {
     }
 
     async execute(go_put_down, x, y, id) {
-        console.log("put_down_in_queue", global.put_down_in_queue)
-        global.put_down_in_queue = false;
+        console.log("put_down_in_queue", consts.put_down_in_queue)
+        consts.put_down_in_queue = false;
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        if (client.deliverooApi.usingPddl) {
+        if (client.usingPddl) {
             await this.subIntention(['pddl_move', x, y]);
         } else {
             await this.subIntention(['go_to', x, y]);
@@ -193,8 +194,8 @@ class GoPutDown extends Plan {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         let status = await client.deliverooApi.putdown();
         if (status) {
-            global.go_put_down_tries = 0;
-            global.me.parcels_on_head = 0;
+            consts.go_put_down_tries = 0;
+            beliefSet.me.parcels_on_head = 0;
             return true;
         }
         return false;
@@ -211,10 +212,10 @@ class RandomMove extends Plan {
     async execute(random_move) {
         if (this.stopped) throw ['stopped']; // if stopped then quit
         console.log("entro random")
-        if (global.me.x != undefined && global.me.y != undefined) {
-            let me_x = Math.round(global.me.x);
-            let me_y = Math.round(global.me.y);
-            let neighbours = global.deliveroo_graph.neighbors(global.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall())
+        if (beliefSet.me.x != undefined && beliefSet.me.y != undefined) {
+            let me_x = Math.round(beliefSet.me.x);
+            let me_y = Math.round(beliefSet.me.y);
+            let neighbours = beliefSet.deliveroo_graph.neighbors(beliefSet.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall())
             //not using this one because of check me_x and me_y
 
             if (neighbours.length === 0) {
@@ -225,21 +226,21 @@ class RandomMove extends Plan {
             let objective_tile;
             let path_length = 0;
             //if all spawn, go to closest delivery tile, else closest spawn tile
-            let best_option = global.all_spawning ? findBestTile(global.delivery_tiles) : findBestTile(global.spawning_tiles);
+            let best_option = beliefSet.all_spawning ? findBestTile(beliefSet.delivery_tiles) : findBestTile(beliefSet.spawning_tiles);
             let new_tile;
             if (best_option) {
                 let random = Math.random();
                 let max_distance = 10;
                 let max_probability = 0.7;
                 let probability = 0.0;
-                let path = astar.search(global.deliveroo_graph, global.deliveroo_graph.grid[me_x][me_y], global.deliveroo_graph.grid[best_option[0]][best_option[1]]);
+                let path = astar.search(beliefSet.deliveroo_graph, beliefSet.deliveroo_graph.grid[me_x][me_y], beliefSet.deliveroo_graph.grid[best_option[0]][best_option[1]]);
                 if (path.length > 0) {
                     objective_tile = path[0];
                     path_length = path.length;
                     probability = Math.min(1, max_probability * ((path_length - 1) / (max_distance - 1)))
-                    if (random < probability && global.deliveroo_graph) {
+                    if (random < probability && beliefSet.deliveroo_graph) {
                         // console.log("objective tile", objective_tile.x, objective_tile.y)
-                        // let tile = global.deliveroo_graph.grid[objective_tile.x][objective_tile.y]
+                        // let tile = beliefSet.deliveroo_graph.grid[objective_tile.x][objective_tile.y]
                         new_tile = objective_tile
                     } else {
                         let filtered_neighbours = neighbours.filter(node => node.x !== objective_tile.x || node.y !== objective_tile.y)
@@ -261,20 +262,20 @@ class RandomMove extends Plan {
             if (client.deliverooApi.usingPddl) {
                 //since planner is too slow, it is better do directly move to the tile here
                 let status = false;
-                if (new_tile.x == me_x + 1 && new_tile.y == me_y && !global.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
+                if (new_tile.x == me_x + 1 && new_tile.y == me_y && !beliefSet.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
                     status = await client.deliverooApi.move('right')
-                } else if (new_tile.x == me_x - 1 && new_tile.y == me_y && !global.deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
+                } else if (new_tile.x == me_x - 1 && new_tile.y == me_y && !beliefSet.deliveroo_graph.getNode(me_x - 1, me_y).isWall()) {
                     status = await client.deliverooApi.move('left')
-                } else if (new_tile.x == me_x && new_tile.y == me_y + 1 && !global.deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
+                } else if (new_tile.x == me_x && new_tile.y == me_y + 1 && !beliefSet.deliveroo_graph.getNode(me_x, me_y + 1).isWall()) {
                     status = await client.deliverooApi.move('up')
-                } else if (new_tile.x == me_x && new_tile.y == me_y - 1 && !global.deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
+                } else if (new_tile.x == me_x && new_tile.y == me_y - 1 && !beliefSet.deliveroo_graph.getNode(me_x, me_y - 1).isWall()) {
                     status = await client.deliverooApi.move('down')
                 }
                 if (status) {
-                    global.me.x = Math.round(status.x);
-                    me_x = global.me.x;
-                    global.me.y = Math.round(status.y);
-                    me_y = global.me.y;
+                    beliefSet.me.x = Math.round(status.x);
+                    me_x = beliefSet.me.x;
+                    beliefSet.me.y = Math.round(status.y);
+                    me_y = beliefSet.me.y;
                 } else {
                     throw ['got blocked by someone, exiting random_move'];
                 }
@@ -294,15 +295,15 @@ class PDDLMove extends Plan {
         return pddl_move == 'pddl_move';
     }
     async execute(pddl_move, x, y) {
-        if (global.me.x != undefined && global.me.y != undefined) {
+        if (beliefSet.me.x != undefined && beliefSet.me.y != undefined) {
 
-            let me_x = Math.round(global.me.x);
-            let me_y = Math.round(global.me.y);
+            let me_x = Math.round(beliefSet.me.x);
+            let me_y = Math.round(beliefSet.me.y);
 
             console.log("create PDDL string");
-            let graph = global.deliveroo_graph
-            let from = global.deliveroo_graph.grid[me_x][me_y]
-            let to = global.deliveroo_graph.grid[x][y]
+            let graph = beliefSet.deliveroo_graph
+            let from = beliefSet.deliveroo_graph.grid[me_x][me_y]
+            let to = beliefSet.deliveroo_graph.grid[x][y]
             let problem = new PDDLProblem(graph, from, to);
             let problemString = await problem.getProblemString();
             let domainString = fs.readFileSync('./src/planning/deliveroojs.pddl', 'utf8').replace(/\r?\n|\r/g, '').replace(/\s\s+/g, ' ');
@@ -315,12 +316,12 @@ class PDDLMove extends Plan {
                 // the parcel was not picked up by someone else 
                 // and if the reward is still positive
                 if (this.parent instanceof GoPickUp) {
-                    let possible_parcel_id = global.parcelLocations[x][y].id;
+                    let possible_parcel_id = beliefSet.parcelLocations[x][y].id;
                     if (possible_parcel_id) {
-                        let parcel = global.parcels.get(possible_parcel_id);
+                        let parcel = beliefSet.parcels.get(possible_parcel_id);
                         //this might not be necessary 
                         // because it depends on if the sensing is done here
-                        if (!parcel.carriedBy || parcel.carriedBy === global.me.id) {
+                        if (!parcel.carriedBy || parcel.carriedBy === beliefSet.me.id) {
                             let delta_seconds = Date.now() - parcel.timestamp;
                             let reward = parcel.rewardAfterNSeconds(delta_seconds / 1000);
                             if (reward <= 0) {
@@ -333,7 +334,7 @@ class PDDLMove extends Plan {
                     }
                 }
                 if (this.parent instanceof GoPutDown) {
-                    if (global.me.parcels_on_head === 0) {
+                    if (beliefSet.me.parcels_on_head === 0) {
                         throw ['no parcels on head, exiting'];
                     }
                 }
@@ -358,10 +359,10 @@ class PDDLMove extends Plan {
                     }
 
                     if (status) {
-                        global.me.x = Math.round(status.x);
-                        me_x = global.me.x;
-                        global.me.y = Math.round(status.y);
-                        me_y = global.me.y;
+                        beliefSet.me.x = Math.round(status.x);
+                        me_x = beliefSet.me.x;
+                        beliefSet.me.y = Math.round(status.y);
+                        me_y = beliefSet.me.y;
                     } else {
                         console.log("blocked")
                         // da decidere cosa fare se provo a muovermi ma qualche infame mi viene davanti e mi blocca
@@ -371,21 +372,21 @@ class PDDLMove extends Plan {
 
                     if (me_x != x || me_y != y) {
                         // se sono su una consegna, consegno
-                        if (global.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && global.me.parcels_on_head > 0) {
+                        if (beliefSet.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && beliefSet.me.parcels_on_head > 0) {
                             let status = await client.deliverooApi.putdown();
                             if (status) {
-                                global.me.parcels_on_head = 0;
+                                beliefSet.me.parcels_on_head = 0;
                             }
                         }
                         if (this.stopped) throw ['stopped']; // if stopped then quit
                         // if I pass on a parcel, I pick it up and remove it from belief set
-                        // if (global.parcelLocations.some(arr => arr[0] === global.me.x && arr[1] === global.me.y)){
-                        if (global.parcelLocations[me_x][me_y].present == 1) {
+                        // if (beliefSet.parcelLocations.some(arr => arr[0] === beliefSet.me.x && arr[1] === beliefSet.me.y)){
+                        if (beliefSet.parcelLocations[me_x][me_y].present == 1) {
                             console.log("provo a tirar su con MOVE")
                             let status = await client.deliverooApi.pickup()
-                            // global.parcelLocations = global.parcelLocations.filter(item => !(item[0] !== global.me.x && item[1] !== global.me.y))
+                            // beliefSet.parcelLocations = beliefSet.parcelLocations.filter(item => !(item[0] !== beliefSet.me.x && item[1] !== beliefSet.me.y))
                             if (status) {
-                                global.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
+                                beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
                             }
                         }
                     }
