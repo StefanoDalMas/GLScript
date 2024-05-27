@@ -6,6 +6,13 @@ import { Graph } from '../tools/astar.js';
 import { distance } from '../tools/distance.js';
 import { Message } from '../classes/message.js';
 import { BeliefSet } from './beliefSet.js';
+import { onConfigHander } from '../handlers/onConfigHandler.js'
+import { onMapHandler } from '../handlers/onMapHandler.js';
+import { onParcelSensingHandler, onParcelSensingHandlerAsync } from '../handlers/onParcelSensingHandler.js';
+import { onYouHandler } from '../handlers/onYouHandler.js';
+import { onAgentSensingHandler } from '../handlers/onAgentSensingHandler.js';
+import { onMsgHandler } from '../handlers/onMsgHandler.js';
+
 
 class Client {
     constructor(configuration, usingPddl, isMaster, secretToken) {
@@ -27,151 +34,19 @@ class Client {
     }
 
     async setUpCallbacks() {
-        this.deliverooApi.onConfig(config => {
-            console.log("config", config)
-            // this.beliefSet.PARCELS_OBSERVATION_DISTANCE = config.PARCELS_OBSERVATION_DISTANCE
-            consts.CLOCK = config.CLOCK
-            consts.MOVEMENT_STEPS = config.MOVEMENT_STEPS
-            consts.MOVEMENT_DURATION = config.MOVEMENT_DURATION
-            consts.PARCEL_DECADING_INTERVAL = config.PARCEL_DECADING_INTERVAL
-            console.log("decaying?", consts.decayingActive())
-        })
+        this.deliverooApi.onConfig(config => onConfigHander(config))
 
-        this.deliverooApi.onMap((width, height, tiles) => {
+        this.deliverooApi.onMap((width, height, tiles) => onMapHandler(width, height, tiles, this.beliefSet))
 
-            let MAX_WIDTH = width - 1;
-            let MAX_HEIGHT = height - 1;
+        this.deliverooApi.onYou(({ id, name, x, y, score }) => onYouHandler(id, name, x, y, score, this.beliefSet))
 
-            let deliveroo_map = [];
-            for (let i = 0; i < width; i++) {
-                deliveroo_map[i] = [];
-                this.beliefSet.parcelLocations[i] = [];
-                for (let j = 0; j < height; j++) {
-                    deliveroo_map[i][j] = 0;
-                    this.beliefSet.parcelLocations[i][j] = { present: 0, id: undefined };
-                }
-            }
+        this.deliverooApi.onParcelsSensing(parcels => onParcelSensingHandler(parcels, this.beliefSet, this.intentionQueue))
 
-            tiles.forEach(tile => {
-                deliveroo_map[tile.x][tile.y] = 1;
-                if (tile.delivery) {
-                    this.beliefSet.delivery_tiles.push([tile.x, tile.y]);
-                }
-                if (tile.parcelSpawner) {
-                    this.beliefSet.spawning_tiles.push([tile.x, tile.y]);
-                }
-            });
+        this.deliverooApi.onParcelsSensing(async (perceived_parcels) => onParcelSensingHandlerAsync(perceived_parcels, this.beliefSet))
 
-            if (this.beliefSet.spawning_tiles.length === tiles.length - this.beliefSet.delivery_tiles.length) {
-                this.beliefSet.all_spawning = true;
-            }
+        this.deliverooApi.onAgentsSensing(async (agents) => onAgentSensingHandler(agents, this.beliefSet))
 
-            this.beliefSet.deliveroo_graph = new Graph(deliveroo_map);
-            this.beliefSet.deliveroo_map = deliveroo_map;
-            consts.MAX_HEIGHT = MAX_HEIGHT;
-            consts.MAX_WIDTH = MAX_WIDTH;
-        })
-
-        this.deliverooApi.onAgentsSensing(async (agents) => {
-            //     //for each agent that I see, set the old location and the new location
-            //     // if it is the first time I see the agent, the old location is the same as the new location
-            agents.forEach(agent => {
-                this.beliefSet.agentsLocations.set(agent.id, new Agent(agent));
-            })
-            // For now I only set wall to the agents that I actually see
-            for (let i = 0; i < consts.MAX_WIDTH; i++) {
-                for (let j = 0; j < consts.MAX_HEIGHT; j++) {
-                    if (this.beliefSet.deliveroo_map[i][j] == 1) {
-                        this.beliefSet.deliveroo_graph.setWalkable(i, j);
-                    }
-                }
-            }
-            //has to be changed!
-            agents.forEach(agent => {
-                let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
-                this.beliefSet.deliveroo_graph.setWall(new_location.x, new_location.y);
-            })
-        })
-        this.deliverooApi.onYou(({ id, name, x, y, score }) => {
-            this.beliefSet.me.id = id
-            this.beliefSet.me.name = name
-            this.beliefSet.me.x = Math.round(x)
-            this.beliefSet.me.y = Math.round(y)
-            this.beliefSet.me.score = score
-        })
-
-        this.deliverooApi.onParcelsSensing(async (perceived_parcels) => {
-            let counter = 0
-            for (const p of perceived_parcels) {
-                this.beliefSet.parcels.set(p.id, new Parcel(p))
-                if (!p.carriedBy && p.reward > 0) {
-                    this.beliefSet.parcelLocations[p.x][p.y] = { present: 1, id: p.id }
-                }
-                else {
-                    if (p.carriedBy === this.beliefSet.me.id) {
-                        counter += 1;
-                    }
-                }
-            }
-            this.beliefSet.me.parcels_on_head = counter;
-        })
-        this.deliverooApi.onParcelsSensing(parcels => {
-
-            // TODO revisit beliefset revision so to trigger option generation only in the case a new parcel is observed
-
-            /**
-             * Options generation
-             */
-            // belief set
-            const options = []
-            for (const parcel of parcels.values())
-                if (!parcel.carriedBy)
-                    options.push(['go_pick_up', new Parcel(parcel)]);
-
-            /**
-             * Options filtering (belief filtering)
-             */
-            let best_option;
-            let reward = Number.NEGATIVE_INFINITY;
-            for (const option of options) {
-                //check if option is in intention_queue
-                if (option[0] == 'go_pick_up' && !this.intentionQueue.find((i) => i.predicate.join(' ') == option.join(' '))) {
-                    let parcel = option[1];
-                    let current_d = distance(parcel.getLocation(), this.beliefSet.me);
-                    let current_reward = parcel.rewardAfterNSteps(current_d);
-                    if (current_reward > 0 && current_reward > reward) {
-                        best_option = option
-                        reward = current_reward
-                    }
-                }
-            }
-
-            /**
-             * Best option is selected
-             */
-            if (best_option && this.intentionQueue.length() < consts.MAX_QUEUE_SIZE) {
-                // console.log("best option: ", best_option)
-                let parcel = best_option[1];
-                this.intentionQueue.push(parcel.intoPredicate(best_option[0]))
-            }
-        })
-
-        this.deliverooApi.onMsg(async (id, name, msg, callbackResponse) => {
-            console.log("received message from ", id, " with content: ", msg)
-            if (!this.isMaster) {
-                if (msg.topic == "ALLYGLS?") {
-                    console.log("GIELLESSE SRL found an ally!");
-                    this.allyList.add(id);
-                    await this.deliverooApi.say(id, new Message("ALLYGLS!", this.secretToken, id, "I'm the slave! :)"));
-                }
-            } else {
-                if (msg.topic == "ALLYGLS!") {
-                    console.log("GIELLESSE SRL found an ally!");
-                    this.allyList.add(id);
-                    await this.deliverooApi.say(id, new Message("ALLYGLS!", this.secretToken, id, "I'm the master! :)"));
-                }
-            }
-        })
+        this.deliverooApi.onMsg((id, name, msg, callbackResponse) => onMsgHandler(id, name, msg, callbackResponse, this.isMaster, this.allyList, this.deliverooApi))
 
     }
 

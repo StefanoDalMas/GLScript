@@ -31,7 +31,6 @@ class IntentionRevision {
             // console.log("dimensione:", this.intention_queue.length)
             console.log("go_put_down_tries = ", consts.go_put_down_tries)
             if (this.intention_queue.length > 0) {
-                var result = "";
 
                 // for (var i = 0; i < this.intention_queue.length; i++) {
                 //     result += this.intention_queue[i].predicate;
