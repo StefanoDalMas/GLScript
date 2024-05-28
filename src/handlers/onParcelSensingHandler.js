@@ -20,6 +20,9 @@ function onParcelSensingHandler(parcels, beliefs, intentionQueue) {
             let parcel = option[1];
             let current_d = distance(parcel.getLocation(), beliefs.me);
             let current_reward = parcel.rewardAfterNSteps(current_d);
+            if (current_d === 0){
+                current_reward = 0;
+            }
             if (current_reward > 0 && current_reward > reward) {
                 best_option = option
                 reward = current_reward
@@ -51,6 +54,9 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs) {
             }
         }
     }
+    //se non la vedo decremento la sua probabilità E valuto il suo reward coi timestamp
+
+    //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
     beliefs.me.parcels_on_head = counter;
 }
 

@@ -13,6 +13,7 @@ class BeliefSet {
 
         //might be needed for map stuff
         this.deliveroo_map;
+        this.deliveroo_graph;
     }
 }
 

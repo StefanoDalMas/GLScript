@@ -5,6 +5,7 @@ import { Parcel } from '../classes/parcel.js';
 import { MaxHeap } from '../tools/maxHeap.js';
 import { distance } from '../tools/distance.js';
 import { client } from '../main.js';
+import { Message } from '../classes/message.js';
 
 
 class IntentionRevision {
@@ -62,13 +63,6 @@ class IntentionRevision {
                         this.push(['go_put_down', best_option[0], best_option[1]]);
                         consts.put_down_in_queue = true;
                     }
-                } else if (consts.go_put_down_tries == 10) {
-                    //try the communication protocol
-                    //TODO 
-                    //domanda all'altro quanto ha di reward
-                    //se ha più reward di me, gli do il mio pacchetto
-                    //capire come trovare il luogo di consegna
-                    this.push
                 }
 
                 // Current intention
@@ -89,6 +83,31 @@ class IntentionRevision {
                         // [MaxHeap]
                         // this.intention_queue.shift();
                         continue;
+                    }
+                }
+                if (intention.predicate[0] === 'go_put_down') {
+                    //ask for Collaboration possibility
+                    //IN SINGLE CORRIDOR DOES NOT GET ACCEPTED
+                    if (client.allyList.size > 0) {
+                        for (let ally of client.allyList) {
+                            let parcelsIterator = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
+                            let carriedParcels = [];
+                            for (let parcel of parcelsIterator) {
+                                carriedParcels.push(parcel);
+                            }
+                            let expectedReward = 0;
+                            let dist = distance(client.beliefSet.me, { x: parseInt(intention.predicate[1]), y: parseInt(intention.predicate[2]) });
+                            for (let parcel of carriedParcels) {
+                                let reward = parcel.rewardAfterNSteps(dist);
+                                expectedReward += reward;
+                            }
+                            if (expectedReward <= 0) {
+                                expectedReward = 0;
+                            }
+                            let msg = new Message("SetUpCollaboration", client.secretToken, { x: client.beliefSet.me.x, y: client.beliefSet.me.y, parcels: carriedParcels, reward: expectedReward });
+                            let response = await client.deliverooApi.ask(ally.id, msg);
+                            console.log("response: ", response);
+                        }
                     }
                 }
                 // Start achieving intention
@@ -114,6 +133,19 @@ class IntentionRevision {
                     consts.go_put_down_tries += 1;
                     this.push(['go_put_down', best_option[0], best_option[1]]);
                     consts.put_down_in_queue = true;
+                } else {
+                    if (client.allyList.size > 0) {
+                        for (let ally of client.allyList) {
+                            let parcelsIterator = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
+                            let carriedParcels = [];
+                            for (let parcel of parcelsIterator) {
+                                carriedParcels.push(parcel);
+                            }
+                            let msg = new Message("SetUpCollaboration", client.secretToken, { x: client.beliefSet.me.x, y: client.beliefSet.me.y, parcels: carriedParcels, reward: 0 });
+                            let response = await client.deliverooApi.ask(ally.id, msg);
+                            console.log("response: ", response);
+                        }
+                    }
                 }
             } else {
                 if (consts.go_put_down_tries >= 10) {

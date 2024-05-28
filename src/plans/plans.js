@@ -230,7 +230,7 @@ class RandomMove extends Plan {
             if (best_option) {
                 let random = Math.random();
                 let max_distance = 10;
-                let max_probability = 0.7;
+                let max_probability = 0.85;
                 let probability = 0.0;
                 let path = astar.search(client.beliefSet.deliveroo_graph, client.beliefSet.deliveroo_graph.grid[me_x][me_y], client.beliefSet.deliveroo_graph.grid[best_option[0]][best_option[1]]);
                 if (path.length > 0) {
