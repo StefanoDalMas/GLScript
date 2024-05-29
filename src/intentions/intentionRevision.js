@@ -74,16 +74,18 @@ class IntentionRevision {
                 if (intention.predicate[0] === 'go_pick_up') {
                     let id = intention.predicate[3]
                     let p = client.beliefSet.parcels.get(id);
-                    let seconds_passed = (Date.now() - p.timestamp) / 1000;
-                    let guessed_reward = p.rewardAfterNSeconds(seconds_passed);
-
-                    //parcelLocations lo settiamo mai a 0?
-                    if (p && p.carriedBy || client.beliefSet.parcelLocations[p.x][p.y].present == 0 || guessed_reward <= 0) {
-                        console.log('Skipping intention because no more valid', intention.predicate)
-                        // [MaxHeap]
-                        // this.intention_queue.shift();
-                        continue;
+                    if (p) {
+                        let stepsToReach = distance(client.beliefSet.me, { x: p.x, y: p.y });
+                        let guessedReward = p.rewardAfterNSteps(stepsToReach);
+                        //parcelLocations lo settiamo mai a 0?
+                        if (p.carriedBy || client.beliefSet.parcelLocations[p.x][p.y].present == 0 || guessedReward <= 0) {
+                            console.log('Skipping intention because no more valid', intention.predicate)
+                            // [MaxHeap]
+                            // this.intention_queue.shift();
+                            continue;
+                        }
                     }
+
                 }
                 if (intention.predicate[0] === 'go_put_down') {
                     //ask for Collaboration possibility

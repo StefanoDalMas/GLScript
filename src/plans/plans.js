@@ -88,13 +88,15 @@ class GoTo extends Plan {
         //follow path until destination is reached
         let me_x = Math.round(client.beliefSet.me.x);
         let me_y = Math.round(client.beliefSet.me.y);
-        while (me_x != x || me_y != y) {
+        let goToTries = 0;
+        while ((me_x != x || me_y != y) && goToTries < consts.MAX_GOTO_TRIES) {
             if (client.beliefSet.deliveroo_graph.getNode(x, y).isWall() || client.beliefSet.deliveroo_graph.getNode(me_x, me_y).isWall()) {
                 this.log('stucked, walking to wall');
                 throw ['stucked', 'walking to wall'];
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
             let path = astar.search(client.beliefSet.deliveroo_graph, client.beliefSet.deliveroo_graph.grid[me_x][me_y], client.beliefSet.deliveroo_graph.grid[x][y]);
+            goToTries += 1;
             if (path.length === 0) {
                 this.log('stucked, no path foound');
                 throw ['stucked', 'no path foound'];
@@ -102,11 +104,13 @@ class GoTo extends Plan {
             let blocked = false;
             for (let index = 0; index < path.length && !blocked; index++) {
                 if (this.parent instanceof GoPickUp) {
-                    let possible_parcel_id = client.beliefSet.parcelLocations[x][y].id;
-                    if (possible_parcel_id) {
-                        let parcel = client.beliefSet.parcels.get(possible_parcel_id);
-                        if (parcel.carriedBy && parcel.carriedBy !== client.beliefSet.me.id) {
-                            throw ['someone took the parcel, exiting'];
+                    if (client.beliefSet.parcelLocations[x][y].present != 0) {
+                        let possible_parcel_id = client.beliefSet.parcelLocations[x][y].id;
+                        if (possible_parcel_id) {
+                            let parcel = client.beliefSet.parcels.get(possible_parcel_id);
+                            if (parcel.carriedBy && parcel.carriedBy !== client.beliefSet.me.id) {
+                                throw ['someone took the parcel, exiting'];
+                            }
                         }
                     }
                 }
@@ -166,9 +170,13 @@ class GoTo extends Plan {
                     }
                 }
                 if (this.stopped) throw ['stopped']; // if stopped then quit
+
             }
 
             if (this.stopped) throw ['stopped']; // if stopped then quit
+        }
+        if (goToTries >= consts.MAX_GOTO_TRIES) {
+            throw ['maximum numbers of tries reached, exiting...'];
         }
 
         return true;
@@ -300,7 +308,7 @@ class PDDLMove extends Plan {
             let me_x = Math.round(client.beliefSet.me.x);
             let me_y = Math.round(client.beliefSet.me.y);
             let neighbours = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall())
-            
+
             //if im adjecent to a delivery tile, go deliver before calling planner
             let delivery_neighbour = neighbours.find(node => client.beliefSet.delivery_tiles.some(tile => tile[0] === node.x && tile[1] === node.y))
             if (delivery_neighbour) {
@@ -317,15 +325,15 @@ class PDDLMove extends Plan {
                 }
                 status = await client.deliverooApi.move(direction)
 
-                if(status){
+                if (status) {
                     await client.deliverooApi.putdown();
                     client.beliefSet.me.x = Math.round(status.x);
                     me_x = client.beliefSet.me.x;
                     client.beliefSet.me.y = Math.round(status.y);
                     me_y = client.beliefSet.me.y;
-                } 
+                }
                 //we don't have else here, we're fine
-            } 
+            }
 
 
             console.log("create PDDL string");
@@ -346,18 +354,20 @@ class PDDLMove extends Plan {
                 if (this.parent instanceof GoPickUp) {
                     let possible_parcel_id = client.beliefSet.parcelLocations[x][y].id;
                     if (possible_parcel_id) {
-                        let parcel = client.beliefSet.parcels.get(possible_parcel_id);
-                        //this might not be necessary 
-                        // because it depends on if the sensing is done here
-                        if (!parcel.carriedBy || parcel.carriedBy === client.beliefSet.me.id) {
-                            let delta_seconds = Date.now() - parcel.timestamp;
-                            let reward = parcel.rewardAfterNSeconds(delta_seconds / 1000);
-                            if (reward <= 0) {
-                                throw ['bad reward, exiting'];
+                        if (client.beliefSet.parcelLocations[x][y].present != 0) {
+                            let parcel = client.beliefSet.parcels.get(possible_parcel_id);
+                            //this might not be necessary 
+                            // because it depends on if the sensing is done here
+                            if (!parcel.carriedBy || parcel.carriedBy === client.beliefSet.me.id) {
+                                let delta_seconds = Date.now() - parcel.timestamp;
+                                let reward = parcel.rewardAfterNSeconds(delta_seconds / 1000);
+                                if (reward <= 0) {
+                                    throw ['bad reward, exiting'];
+                                }
                             }
-                        }
-                        else {
-                            throw ['someone took the parcel, exiting'];
+                            else {
+                                throw ['someone took the parcel, exiting'];
+                            }
                         }
                     }
                 }
@@ -443,10 +453,10 @@ class PDDLMove extends Plan {
 }
 
 class CollaborationDelivery extends Plan {
-    static isApplicableTo(collaboration_delivery, x, y){
+    static isApplicableTo(collaboration_delivery, x, y) {
         return collaboration_delivery == 'collaboration_delivery';
     }
-    async execute(){
+    async execute() {
         // TODO
         // l'altro mi ha detto ""
     }

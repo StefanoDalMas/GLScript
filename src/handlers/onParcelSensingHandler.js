@@ -20,7 +20,7 @@ function onParcelSensingHandler(parcels, beliefs, intentionQueue) {
             let parcel = option[1];
             let current_d = distance(parcel.getLocation(), beliefs.me);
             let current_reward = parcel.rewardAfterNSteps(current_d);
-            if (current_d === 0){
+            if (current_d === 0) {
                 current_reward = 0;
             }
             if (current_reward > 0 && current_reward > reward) {
@@ -51,6 +51,18 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs) {
         else {
             if (p.carriedBy === beliefs.me.id) {
                 counter += 1;
+            }
+        }
+    }
+    //find all parcels that are in the set but are not perceived
+    for (const [id, parcel] of beliefs.parcels) {
+        if (!perceived_parcels.find((p) => p.id === id) && parcel.carriedBy !== beliefs.me.id) {
+            parcel.probability -= consts.PROBABILITY_DECAY;
+            parcel.reward = parcel.rewardAfterNSeconds((Date.now() - parcel.timestamp) / 1000)
+            if (parcel.probability < consts.THRESHOLD_REMOVAL || parcel.reward <= 0) {
+                console.log("removing parcel ", parcel);
+                beliefs.parcels.delete(id)
+                beliefs.parcelLocations[parcel.x][parcel.y] = { present: 0, id: undefined }
             }
         }
     }

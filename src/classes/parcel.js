@@ -9,6 +9,7 @@ class Parcel {
         this.carriedBy = parcel.carriedBy;
         this.reward = parcel.reward;
         this.timestamp = Date.now();
+        this.probability = 1;
     }
     rewardAfterNSteps(steps) {
         if (steps === 0) {
