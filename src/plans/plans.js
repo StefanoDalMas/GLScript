@@ -418,10 +418,10 @@ class PDDLMove extends Plan {
                         me_y = client.beliefSet.me.y;
                     } else {
                         console.log("blocked")
+                        //TODO vedere se sta cosa può esserre buona
+                        await new Promise(res => setImmediate(res));
                         // da decidere cosa fare se provo a muovermi ma qualche infame mi viene davanti e mi blocca
                         // esce dall'intenzione, verrà visto il nuovo path da fare e si pusha un altro pddl_move
-                        //TODO fare come viene fatto per la GoTo standard
-                        throw ['got blocked by someone, exiting pddl_move'];
                     }
 
                     if (me_x != x || me_y != y) {

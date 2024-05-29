@@ -7,20 +7,17 @@ import { Agent } from '../classes/agents.js'
 async function onAgentSensingHandler(agents, beliefs) {
     agents.forEach(agent => {
         beliefs.agentsLocations.set(agent.id, new Agent(agent));
-    })
-    // For now I only set wall to the agents that I actually see
-    for (let i = 0; i < consts.MAX_WIDTH; i++) {
-        for (let j = 0; j < consts.MAX_HEIGHT; j++) {
-            if (beliefs.deliveroo_map[i][j] == 1) {
-                beliefs.deliveroo_graph.setWalkable(i, j);
+        beliefs.deliveroo_graph.setWall(Math.round(agent.x), Math.round(agent.y));
+    });
+    //for every agent that I do not see, I have to reduce its probability of being there
+    for (let agent of beliefs.agentsLocations.values()) {
+        if (!agents.find((a) => a.id === agent.id)) {
+            agent.probability -= consts.AGENT_PROBABILITY_DECAY;
+            if (agent.probability > 0 && agent.probability < consts.AGENT_THRESHOLD_REMOVAL) {
+                beliefs.deliveroo_graph.setWalkable(agent.x, agent.y);
             }
         }
     }
-    //has to be changed!
-    agents.forEach(agent => {
-        let new_location = { x: Math.round(agent.x), y: Math.round(agent.y) };
-        beliefs.deliveroo_graph.setWall(new_location.x, new_location.y);
-    })
 }
 
 export { onAgentSensingHandler }

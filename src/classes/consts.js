@@ -6,8 +6,11 @@ class Consts{
         this.MAX_PICKED_PARCELS = 3;
         this.MAX_GOTO_TRIES = 3;
 
-        this.PROBABILITY_DECAY = 0.03;
-        this.THRESHOLD_REMOVAL = 0.4;
+        this.PARCEL_PROBABILITY_DECAY = 0.03;
+        this.PARCEL_THRESHOLD_REMOVAL = 0.4;
+
+        this.AGENT_PROBABILITY_DECAY = 0.1;
+        this.AGENT_THRESHOLD_REMOVAL = 0.5;
         
         this.PARCEL_DECADING_INTERVAL;
         this.MOVEMENT_DURATION;

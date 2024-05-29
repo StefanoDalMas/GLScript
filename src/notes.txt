@@ -27,7 +27,6 @@ intentions implementations:
 TODO NOW
 
 - Features : 
-    - nel ParcelSensing aggiugnere una probabilità che ci sia (inizia da 1 e ad ogni tick levare probabilità), se è bassa leviamo 
     - ...
 
 - Comunicazione :
@@ -42,7 +41,7 @@ TODO NOW
 
 - Planner : 
     - rendere funzioni il codice che è copiato nei plan(vedi PDDLMove...)
-    - controllare perchè crasha quando si muove e trova un tipo davanti
+    - se fallisce il plan vedere che accade quando faccio la setImmediate(loop infinito su IntentionRevision)
 
 
 fine
