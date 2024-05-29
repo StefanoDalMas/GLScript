@@ -36,6 +36,31 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
             allyList.add({ id: id, token: msg.token });
         }
     }
+    if (msg.topic === "PARACELS") {
+        console.log("Paracels recived")
+        externalParacels = msg.content.paracels;
+        for (let parcel of externalParacels) {
+            let objParcel = new Parcel(parcel)
+            let parcelId = objParcel.id;
+            if (beliefSet.parcels.has(parcelId)) {
+                // se ho già quella parcella, tengo quella più recente e se non è la mia ricalcolo il reward
+                let myParcel = beliefSet.parcels.get(parcelId);
+                if (myParcel.timestamp < objParcel.timestamp) {
+                    beliefSet.parcels.delete(parcelId);
+                    let bestTile = findBestTile(beliefSet.delivery_tiles);
+                    let distanceToDelivery = distance(beliefSet.me, { x: bestTile[0], y: bestTile[1] });
+                    objParcel.reward = objParcel.rewardAfterNSteps(distanceToDelivery);
+                    beliefSet.parcels.set(parcelId, objParcel)
+                }
+            } else {
+                // se non cel'ho la aggiungo aggiornando il reward per me
+                let bestTile = findBestTile(beliefSet.delivery_tiles);
+                let distanceToDelivery = distance(beliefSet.me, { x: bestTile[0], y: bestTile[1] });
+                objParcel.reward = objParcel.rewardAfterNSteps(distanceToDelivery);
+                beliefSet.parcels.set(parcelId, objParcel)
+            }
+        }
+    }
     if (msg.topic === "SetUpCollaboration") {
         if (callbackResponse === undefined) {
             console.log("no callbackResponse");

@@ -41,7 +41,7 @@ function onParcelSensingHandler(parcels, beliefs, intentionQueue) {
 
 }
 
-async function onParcelSensingHandlerAsync(perceived_parcels, beliefs) {
+async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList) {
     let counter = 0
     for (const p of perceived_parcels) {
         beliefs.parcels.set(p.id, new Parcel(p))
@@ -54,7 +54,7 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs) {
             }
         }
     }
-    //find all parcels that are in the set but are not perceived
+    //se non la vedo decremento la sua probabilità E valuto il suo reward coi timestamp
     for (const [id, parcel] of beliefs.parcels) {
         if (!perceived_parcels.find((p) => p.id === id) && parcel.carriedBy !== beliefs.me.id) {
             parcel.probability -= consts.PARCEL_PROBABILITY_DECAY;
@@ -66,9 +66,19 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs) {
             }
         }
     }
-    //se non la vedo decremento la sua probabilità E valuto il suo reward coi timestamp
 
     //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
+    if (beliefs.parcels.size > 0) {
+        let parcelsIterator = beliefs.parcels.values().filter(parcel => parcel.carriedBy !== client.beliefSet.me.id);
+        let sensedParcels = [];
+        for (let parcel of parcelsIterator) {
+            sensedParcels.push(parcel);
+        }
+        for (let ally of allyList) {
+            await deliverooApi.say(ally.id, new Message("PARACELS", secretToken, { paracels: sensedParcels }));
+        }
+    }
+
     beliefs.me.parcels_on_head = counter;
 }
 
