@@ -8,6 +8,7 @@ import { client } from '../main.js';
 import { Message } from '../classes/message.js';
 import { Parcel } from '../classes/parcel.js';
 import fs from 'fs';
+import { sleep } from '../tools/sleep.js';
 
 class Plan {
 
@@ -393,22 +394,24 @@ class PDDLMove extends Plan {
                 }
                 console.log("unpack plan");
                 status = false;
-                for (let step of plan) {
+                for (let i = 0; i < plan.length; i++) {
+                    let step = plan[i];
+                    
                     if (step.action == 'move_right') {
-                        console.log("move right")
-                        status = await client.deliverooApi.move('right')
+                        console.log("move right");
+                        status = await client.deliverooApi.move('right');
                     }
                     if (step.action == 'move_left') {
-                        console.log("move left")
-                        status = await client.deliverooApi.move('left')
+                        console.log("move left");
+                        status = await client.deliverooApi.move('left');
                     }
                     if (step.action == 'move_up') {
-                        console.log("move up")
-                        status = await client.deliverooApi.move('up')
+                        console.log("move up");
+                        status = await client.deliverooApi.move('up');
                     }
                     if (step.action == 'move_down') {
-                        console.log("move down")
-                        status = await client.deliverooApi.move('down')
+                        console.log("move down");
+                        status = await client.deliverooApi.move('down');
                     }
 
                     if (status) {
@@ -418,10 +421,10 @@ class PDDLMove extends Plan {
                         me_y = client.beliefSet.me.y;
                     } else {
                         console.log("blocked")
-                        //TODO vedere se sta cosa può esserre buona
-                        await new Promise(res => setImmediate(res));
-                        // da decidere cosa fare se provo a muovermi ma qualche infame mi viene davanti e mi blocca
-                        // esce dall'intenzione, verrà visto il nuovo path da fare e si pusha un altro pddl_move
+                        //TODO vedere se sta cosa può esserre buona [secondo me no.. si ferma per troppo poco tempo (un ciclo dell'event loop di node)]
+                        // await new Promise(res => setImmediate(res));
+                        await sleep(1);
+                        i -= 1;
                     }
 
                     if (me_x != x || me_y != y) {
