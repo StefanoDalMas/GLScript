@@ -5,6 +5,8 @@ import { findBestTile } from '../tools/findBestTile.js';
 import { onlineSolver } from "@unitn-asa/pddl-client";
 import { PDDLProblem } from '../planning/PDDLProblem.js';
 import { client } from '../main.js';
+import { Message } from '../classes/message.js';
+import { Parcel } from '../classes/parcel.js';
 import fs from 'fs';
 
 class Plan {
@@ -380,7 +382,8 @@ class PDDLMove extends Plan {
                         let carriedParcels = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
 
                         for (let parcel of carriedParcels) {
-                            let reward = parcel.rewardAfterNSteps(path.length);
+                            let parcelObj = new Parcel(parcel);
+                            let reward = parcelObj.rewardAfterNSteps(plan.length);
                             finalReward += reward;
                         }
                         if (finalReward <= 0) {
@@ -417,6 +420,7 @@ class PDDLMove extends Plan {
                         console.log("blocked")
                         // da decidere cosa fare se provo a muovermi ma qualche infame mi viene davanti e mi blocca
                         // esce dall'intenzione, verrà visto il nuovo path da fare e si pusha un altro pddl_move
+                        //TODO fare come viene fatto per la GoTo standard
                         throw ['got blocked by someone, exiting pddl_move'];
                     }
 
@@ -452,16 +456,82 @@ class PDDLMove extends Plan {
     }
 }
 
-class CollaborationDelivery extends Plan {
-    static isApplicableTo(collaboration_delivery, x, y) {
-        return collaboration_delivery == 'collaboration_delivery';
+
+class AtomicExchange extends Plan {
+    static isApplicableTo(atomic_exchange, x, y) {
+        return atomic_exchange == 'atomic_exchange';
     }
-    async execute() {
-        // TODO
-        // l'altro mi ha detto ""
+    async execute(atomic_exchange, x, y) {
+        let goToMiddlePointCounter = 0;
+        while (distance(client.beliefSet.me, { x: x, y: y }) > 1 && goToMiddlePointCounter < consts.MAX_GOTO_TRIES) {
+            await this.subIntention(['go_to', x, y]);
+            goToMiddlePointCounter++;
+        }
+        if (goToMiddlePointCounter >= consts.MAX_GOTO_TRIES) {
+            //for each ally in the list of allies
+            for (let ally of client.allyList) {
+                await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
+            }
+            throw ['I cannot reach the middle point, exiting...'];
+        }
+        if (client.isMaster) {
+            for (let ally of client.allyList) {
+                await client.deliverooApi.say(ally, new Message("atMiddlePoint", client.secretToken, { x: client.beliefSet.me.x, y: client.beliefSet.me.y }));
+                while (!client.collaborationClass.collaboratorOnSite) {
+                    //wait for the collaborator to arrive (we set this to true in the onMsgHandler)
+                    await new Promise(res => setImmediate(res));
+                }
+                while (!client.collaborationClass.collaboratorAdjacent) {
+                    //wait for the collaborator to be adjacent to me
+                    await new Promise(res => setImmediate(res));
+                }
+            }
+        } else {
+            if (!client.collaborationClass.collaboratorOnSite) {
+                let myNeighbours = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
+                let collaborationLocation = client.collaborationClass.collaborationLocation;
+                //check if collaborator is in my neighbours
+                let found = false;
+                for (let neighbour of myNeighbours) {
+                    if (neighbour.x == collaborationLocation.x && neighbour.y == collaborationLocation.y) {
+                        found = true;
+                    }
+                }
+                if (found){
+                    // TODO send message to perform step 2. We are now adjacent and ready to exchange
+                } else {
+                    for (let ally of client.allyList) {
+                        await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
+                    }
+                    throw ['collaboration failed, we cannot reach each other'];
+                }
+
+            } else {
+                while (!client.collaborationClass.collaboratorOnSite) {
+                    //wait for the collaborator to arrive
+                    await new Promise(res => setImmediate(res));
+                }
+                let myNeighbours = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
+                let collaborationLocation = client.collaborationClass.collaborationLocation;
+                //check if collaborator is in my neighbours
+                let found = false;
+                for (let neighbour of myNeighbours) {
+                    if (neighbour.x == collaborationLocation.x && neighbour.y == collaborationLocation.y) {
+                        found = true;
+                    }
+                }
+                if(found){
+                    // TODO send message to perform step 2. We are now adjacent and ready to exchange
+                } else {
+                    for(let ally of client.allyList){
+                        await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
+                    }
+                    throw ['collaboration failed, we cannot reach each other'];
+                }
+            }
+        }
     }
 }
-
 
 const planLibrary = []
 planLibrary.push(GoPickUp);

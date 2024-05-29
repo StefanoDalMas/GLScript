@@ -12,6 +12,7 @@ import { onParcelSensingHandler, onParcelSensingHandlerAsync } from '../handlers
 import { onYouHandler } from '../handlers/onYouHandler.js';
 import { onAgentSensingHandler } from '../handlers/onAgentSensingHandler.js';
 import { onMsgHandler } from '../handlers/onMsgHandler.js';
+import { CollaborationClass } from './collaborationClass.js';
 
 
 class Client {
@@ -23,6 +24,7 @@ class Client {
         this.intentionQueue = new IntentionRevisionMaxHeap();
         this.beliefSet = new BeliefSet();
         this.allyList = new Set();
+        this.collaborationClass = new CollaborationClass();
     }
 
     async configure() {
