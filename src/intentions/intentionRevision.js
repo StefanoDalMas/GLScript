@@ -99,7 +99,7 @@ class IntentionRevision {
                 if (intention.predicate[0] === 'go_put_down') {
                     //ask for Collaboration possibility
                     //IN SINGLE CORRIDOR DOES NOT GET ACCEPTED
-                    if (client.allyList.size > 0) {
+                    if (client.allyList.size > 0){ //&& !consts.deliveryingAfterCollaboration) {
                         for (let ally of client.allyList) {
                             let parcelsIterator = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
                             let carriedParcels = [];
@@ -121,7 +121,8 @@ class IntentionRevision {
                                 let middlePoint_x = response.content.x;
                                 let middlePoint_y = response.content.y;
                                 this.stopAll();
-                                this.push(['atomic_exchange', middlePoint_x, middlePoint_y]);
+                                // consts.deliveryingAfterCollaboration = true;
+                                this.push(['atomic_exchange', middlePoint_x, middlePoint_y, true]);
                                 await client.deliverooApi.say(ally.id, new Message("AtomicExchange", client.secretToken, { x: middlePoint_x, y: middlePoint_y }));
                             }
                         }
@@ -165,7 +166,7 @@ class IntentionRevision {
                     this.push(['go_put_down', best_option[0], best_option[1]]);
                     consts.put_down_in_queue = true;
                 } else {
-                    if (client.allyList.size > 0) {
+                    if (client.allyList.size > 0){ //&& !consts.deliveryingAfterCollaboration) {
                         for (let ally of client.allyList) {
                             let parcelsIterator = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
                             let carriedParcels = [];
@@ -179,7 +180,8 @@ class IntentionRevision {
                                 let middlePoint_x = response.content.x;
                                 let middlePoint_y = response.content.y;
                                 this.stopAll();
-                                this.push(['atomic_exchange', middlePoint_x, middlePoint_y]);
+                                // consts.deliveryingAfterCollaboration = true;
+                                this.push(['atomic_exchange', middlePoint_x, middlePoint_y, true]);
                                 await client.deliverooApi.say(ally.id, new Message("AtomicExchange", client.secretToken, { x: middlePoint_x, y: middlePoint_y }));
                             }
                         }

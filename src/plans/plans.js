@@ -9,6 +9,7 @@ import { Message } from '../classes/message.js';
 import { Parcel } from '../classes/parcel.js';
 import fs from 'fs';
 import { sleep } from '../tools/sleep.js';
+import { distance } from '../tools/distance.js'
 
 class Plan {
 
@@ -95,14 +96,14 @@ class GoTo extends Plan {
         while ((me_x != x || me_y != y) && goToTries < consts.MAX_PLAN_TRIES) {
             if (client.beliefSet.deliveroo_graph.getNode(x, y).isWall() || client.beliefSet.deliveroo_graph.getNode(me_x, me_y).isWall()) {
                 this.log('stucked, walking to wall');
-                throw ['stucked', 'walking to wall'];
+                return false;
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
             let path = astar.search(client.beliefSet.deliveroo_graph, client.beliefSet.deliveroo_graph.grid[me_x][me_y], client.beliefSet.deliveroo_graph.grid[x][y]);
             goToTries += 1;
             if (path.length === 0) {
-                this.log('stucked, no path foound');
-                throw ['stucked', 'no path foound'];
+                this.log('stucked, no path found');
+                return false;
             }
             let blocked = false;
             for (let index = 0; index < path.length && !blocked; index++) {
@@ -112,14 +113,14 @@ class GoTo extends Plan {
                         if (possible_parcel_id) {
                             let parcel = client.beliefSet.parcels.get(possible_parcel_id);
                             if (parcel.carriedBy && parcel.carriedBy !== client.beliefSet.me.id) {
-                                throw ['someone took the parcel, exiting'];
+                                return false;
                             }
                         }
                     }
                 }
                 if (this.parent instanceof GoPutDown) {
                     if (client.beliefSet.me.parcels_on_head === 0) {
-                        throw ['no parcels on head, exiting'];
+                        return false;
                     }
                 }
 
@@ -178,7 +179,7 @@ class GoTo extends Plan {
             if (this.stopped) throw ['stopped']; // if stopped then quit
         }
         if (goToTries >= consts.MAX_PLAN_TRIES) {
-            throw ['maximum numbers of tries reached, exiting...'];
+            return false;
         }
 
         return true;
@@ -195,17 +196,21 @@ class GoPutDown extends Plan {
         console.log("put_down_in_queue", consts.put_down_in_queue)
         consts.put_down_in_queue = false;
         if (this.stopped) throw ['stopped']; // if stopped then quit
+        let statusMove = false;
         if (client.usingPddl) {
-            await this.subIntention(['pddl_move', x, y]);
+            statusMove = await this.subIntention(['pddl_move', x, y]);
         } else {
-            await this.subIntention(['go_to', x, y]);
+            statusMove = await this.subIntention(['go_to', x, y]);
         }
         if (this.stopped) throw ['stopped']; // if stopped then quit
-        let status = await client.deliverooApi.putdown();
-        if (status) {
-            consts.go_put_down_tries = 0;
-            client.beliefSet.me.parcels_on_head = 0;
-            return true;
+        if (statusMove) {
+            let status = await client.deliverooApi.putdown();
+            if (status) {
+                consts.go_put_down_tries = 0;
+                client.beliefSet.me.parcels_on_head = 0;
+                return true;
+            }
+            return false;
         }
         return false;
     }
@@ -229,7 +234,7 @@ class RandomMove extends Plan {
 
             if (neighbours.length === 0) {
                 this.log('stucked');
-                throw ['stucked, no possible moves'];
+                return false;
             }
 
             let objective_tile;
@@ -244,20 +249,27 @@ class RandomMove extends Plan {
                 let probability = 0.0;
                 let path = astar.search(client.beliefSet.deliveroo_graph, client.beliefSet.deliveroo_graph.grid[me_x][me_y], client.beliefSet.deliveroo_graph.grid[best_option[0]][best_option[1]]);
                 if (path.length > 0) {
+                    let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall());
+                    //if I'm in a corridor, just follow the path
                     objective_tile = path[0];
-                    path_length = path.length;
-                    probability = Math.min(1, max_probability * ((path_length - 1) / (max_distance - 1)))
-                    if (random < probability && client.beliefSet.deliveroo_graph) {
-                        // console.log("objective tile", objective_tile.x, objective_tile.y)
-                        // let tile = client.beliefSet.deliveroo_graph.grid[objective_tile.x][objective_tile.y]
-                        new_tile = objective_tile
-                    } else {
-                        let filtered_neighbours = neighbours.filter(node => node.x !== objective_tile.x || node.y !== objective_tile.y)
-                        if (filtered_neighbours.length > 0) {
-                            new_tile = filtered_neighbours[Math.floor(Math.random() * filtered_neighbours.length)]
-                        }
-                        else {
-                            throw ['stucked', ' cant get closer to delivery'];
+                    if (neighbors.length >=1 && neighbors.length <= 2) {
+                        new_tile = objective_tile;
+                    }
+                    else {
+                        path_length = path.length;
+                        probability = Math.min(1, max_probability * ((path_length - 1) / (max_distance - 1)))
+                        if (random < probability && client.beliefSet.deliveroo_graph) {
+                            // console.log("objective tile", objective_tile.x, objective_tile.y)
+                            // let tile = client.beliefSet.deliveroo_graph.grid[objective_tile.x][objective_tile.y]
+                            new_tile = objective_tile
+                        } else {
+                            let filtered_neighbours = neighbours.filter(node => node.x !== objective_tile.x || node.y !== objective_tile.y)
+                            if (filtered_neighbours.length > 0) {
+                                new_tile = filtered_neighbours[Math.floor(Math.random() * filtered_neighbours.length)]
+                            }
+                            else {
+                                return false;
+                            }
                         }
                     }
                 } else {
@@ -286,7 +298,7 @@ class RandomMove extends Plan {
                     client.beliefSet.me.y = Math.round(status.y);
                     me_y = client.beliefSet.me.y;
                 } else {
-                    throw ['got blocked by someone, exiting random_move'];
+                    return false;
                 }
                 if (this.stopped) throw ['stopped'];
             } else {
@@ -368,11 +380,11 @@ class PDDLMove extends Plan {
                                 let delta_seconds = Date.now() - parcel.timestamp;
                                 let reward = parcel.rewardAfterNSeconds(delta_seconds / 1000);
                                 if (reward <= 0) {
-                                    throw ['bad reward, exiting'];
+                                    return false;
                                 }
                             }
                             else {
-                                throw ['someone took the parcel, exiting'];
+                                return false;
                             }
                         }
                     }
@@ -381,7 +393,7 @@ class PDDLMove extends Plan {
 
                 if (this.parent instanceof GoPutDown) {
                     if (client.beliefSet.me.parcels_on_head === 0) {
-                        throw ['no parcels on head, exiting'];
+                        return false;
                     }
                     else {
                         let finalReward = 0;
@@ -393,7 +405,7 @@ class PDDLMove extends Plan {
                             finalReward += reward;
                         }
                         if (finalReward <= 0) {
-                            throw ['reward is not good anymore, exiting'];
+                            return false;
                         }
                     }
                 }
@@ -456,7 +468,7 @@ class PDDLMove extends Plan {
             } else {
                 // qua da mettere cosa fare nel caso in cui non viene trovato un plan per andare da qualche parte (non c'è una strada perchè qualcuno in mezzo)
                 //direi che se non trova nulla, riprova a fare un random move
-                throw ['no plan found, exiting'];
+                return false;
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
 
@@ -469,77 +481,93 @@ class AtomicExchange extends Plan {
     static isApplicableTo(atomic_exchange, x, y) {
         return atomic_exchange == 'atomic_exchange';
     }
-    async execute(atomic_exchange, x, y) {
+    async execute(atomic_exchange, x, y, hasToDrop) {
         //we never check if (this.stopped) throw ['stopped']; because we cannot preempt this plan
 
         let goToMiddlePointCounter = 0;
-        while (distance(client.beliefSet.me, { x: x, y: y }) > 1 && goToMiddlePointCounter < consts.MAX_PLAN_TRIES) {
+        //se ho l'alleato in mezzo dustance diventa 0 perchè non trova un percorso possibile
+        //distance(client.beliefSet.me, { x: x, y: y }) > 1
+        let allyFound = false;
+        let allyLocation;
+        while (goToMiddlePointCounter < consts.MAX_PLAN_TRIES && (client.beliefSet.me.x != x || client.beliefSet.me.y != y) && !allyFound) {
+            let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
+            //find if my ally is what is blocking me
+            for (let ally of client.allyList) {
+                for (let neighbour of neighbors) {
+                    let myAlly = client.beliefSet.agentsLocations.get(ally.id);
+                    if (myAlly) {
+                        if (neighbour.x === myAlly.x && neighbour.y === myAlly.y) {
+                            allyFound = true;
+                            allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
+                        }
+                    }
+                }
+            }
             await this.subIntention(['go_to', x, y]);
             goToMiddlePointCounter++;
         }
         if (goToMiddlePointCounter >= consts.MAX_PLAN_TRIES) {
             //for each ally in the list of allies
             for (let ally of client.allyList) {
+                // consts.deliveryingAfterCollaboration = false;
                 await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
             }
-            throw ['I cannot reach the middle point, exiting...'];
+            return false;
         }
-        if (client.isMaster) {
-            for (let ally of client.allyList) {
-                await client.deliverooApi.say(ally, new Message("atMiddlePoint", client.secretToken, { x: client.beliefSet.me.x, y: client.beliefSet.me.y }));
-                while (!client.collaborationClass.collaboratorOnSite) {
-                    //wait for the collaborator to arrive (we set this to true in the onMsgHandler)
-                    await new Promise(res => setImmediate(res));
-                }
-                while (!client.collaborationClass.collaboratorAdjacent) {
-                    //wait for the collaborator to be adjacent to me
-                    await new Promise(res => setImmediate(res));
-                }
-            }
-        } else {
-            if (!client.collaborationClass.collaboratorOnSite) {
-                let myNeighbours = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
-                let collaborationLocation = client.collaborationClass.collaborationLocation;
-                //check if collaborator is in my neighbours
-                let found = false;
-                for (let neighbour of myNeighbours) {
-                    if (neighbour.x == collaborationLocation.x && neighbour.y == collaborationLocation.y) {
-                        found = true;
-                    }
-                }
-                if (found) {
-                    // TODO send message to perform step 2. We are now adjacent and ready to exchange
-                } else {
-                    for (let ally of client.allyList) {
-                        await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
-                    }
-                    throw ['collaboration failed, we cannot reach each other'];
-                }
 
-            } else {
-                while (!client.collaborationClass.collaboratorOnSite) {
-                    //wait for the collaborator to arrive
-                    await new Promise(res => setImmediate(res));
-                }
-                let myNeighbours = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
-                let collaborationLocation = client.collaborationClass.collaborationLocation;
-                //check if collaborator is in my neighbours
-                let found = false;
-                for (let neighbour of myNeighbours) {
-                    if (neighbour.x == collaborationLocation.x && neighbour.y == collaborationLocation.y) {
-                        found = true;
+        while (!allyFound) {
+            for (let ally of client.allyList) {
+                let myAlly = client.beliefSet.agentsLocations.get(ally.id);
+                let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
+                for (let neighbour of neighbors) {
+                    if (myAlly.x === neighbour.x && myAlly.y === neighbour.y) {
+                        allyFound = true;
+                        allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
                     }
-                }
-                if (found) {
-                    // TODO send message to perform step 2. We are now adjacent and ready to exchange
-                } else {
-                    for (let ally of client.allyList) {
-                        await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
-                    }
-                    throw ['collaboration failed, we cannot reach each other'];
                 }
             }
+            await sleep(100);
         }
+        await sleep(300);
+        //now they are both near to each other, we can start the exchange
+        if (hasToDrop) {
+            let carriedParcels = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
+            let status = await client.deliverooApi.putdown();
+            client.beliefSet.parcelLocations[client.beliefSet.me.x][client.beliefSet.me.y] = { location: 1, id: carriedParcels[0] };
+            if (status) {
+                client.beliefSet.me.parcels_on_head = 0;
+            }
+            this.subIntention(['random_move']);
+            await sleep(500);
+        } else {
+            let direction = '';
+            let me_x = Math.round(client.beliefSet.me.x);
+            let me_y = Math.round(client.beliefSet.me.y);
+            if (allyLocation.x === me_x + 1 && allyLocation.y === me_y) {
+                direction = 'right';
+            } else if (allyLocation.x === me_x - 1 && allyLocation.y === me_y) {
+                direction = 'left';
+            } else if (allyLocation.x === me_x && allyLocation.y === me_y + 1) {
+                direction = 'up';
+            } else if (allyLocation.x === me_x && allyLocation.y === me_y - 1) {
+                direction = 'down';
+            }
+            let moved = false;
+            while (!moved) {
+                moved = await client.deliverooApi.move(direction);
+            }
+            client.beliefSet.me.x = Math.round(moved.x);
+            client.beliefSet.me.y = Math.round(moved.y);
+            await client.deliverooApi.pickup();
+            client.beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
+            let closestDelivery = findBestTile(client.beliefSet.delivery_tiles);
+            await this.subIntention(['go_put_down', closestDelivery[0], closestDelivery[1]]);
+            for (let allyId of client.allyList) {
+                await client.deliverooApi.say(allyId, new Message("AtomicExchangeFinished", client.secretToken, "Atomic Exchange Finished!"));
+            }
+
+        }
+        return true;
     }
 }
 

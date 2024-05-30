@@ -5,12 +5,15 @@ import { Message } from '../classes/message.js';
 
 
 async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken, allyList) {
+    if (beliefs.me) {
+        beliefs.agentsLocations.set(beliefs.me.id, beliefs.me);
+    }
     agents.forEach(agent => {
         //If I already know the agent, I have to update its position
         if (beliefs.agentsLocations.has(agent.id)) {
             let oldAgentData = beliefs.agentsLocations.get(agent.id);
-            let old_x = oldAgentData.x;
-            let old_y = oldAgentData.y;
+            let old_x = Math.round(oldAgentData.x);
+            let old_y = Math.round(oldAgentData.y);
             beliefs.deliveroo_graph.setWalkable(old_x, old_y);
         }
         //set it to wall
@@ -27,16 +30,17 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
             }
         }
     }
-    if (beliefs.agentsLocations.size > 0 && allyList.size > 0) {
-        let agentsIterator = beliefs.agentsLocations.values();
-        let sensedAgents = [];
-        for (let agent of agentsIterator) {
-            sensedAgents.push(agent);
-        }
-        for (let ally of allyList) {
-            await deliverooApi.say(ally.id, new Message("AGENTS", secretToken, { agents: sensedAgents }));
-        }
-    }
+    // if (beliefs.agentsLocations.size > 0 && allyList.size > 0) {
+    //     let agentsIterator = beliefs.agentsLocations.values();
+    //     let sensedAgents = [];
+    //     for (let agent of agentsIterator) {
+    //         sensedAgents.push(agent);
+    //     }
+    //     sensedAgents.push(beliefs.me);
+    //     for (let ally of allyList) {
+    //         await deliverooApi.say(ally.id, new Message("AGENTS", secretToken, { agents: sensedAgents }));
+    //     }
+    // }
 }
 
 export { onAgentSensingHandler }

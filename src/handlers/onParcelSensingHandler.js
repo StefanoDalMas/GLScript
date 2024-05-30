@@ -55,30 +55,31 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
             }
         }
     }
-    //se non la vedo decremento la sua probabilità E valuto il suo reward coi timestamp
-    for (const [id, parcel] of beliefs.parcels) {
-        if (!perceived_parcels.find((p) => p.id === id) && parcel.carriedBy !== beliefs.me.id) {
-            parcel.probability -= consts.PARCEL_PROBABILITY_DECAY;
-            parcel.reward = parcel.rewardAfterNSeconds((Date.now() - parcel.timestamp) / 1000)
-            if (parcel.probability < consts.PARCEL_THRESHOLD_REMOVAL || parcel.reward <= 0) {
-                console.log("removing parcel ", parcel);
-                beliefs.parcels.delete(id)
-                beliefs.parcelLocations[parcel.x][parcel.y] = { present: 0, id: undefined }
-            }
+    let perceivedParcelsId = perceived_parcels.map((p) => p.id);
+    let unseenParcelsIds = Array.from(beliefs.parcels.keys()).filter((id) => !perceivedParcelsId.includes(id));
+
+    for (let id of unseenParcelsIds){
+        let parcel = beliefs.parcels.get(id);
+        parcel.probability -= consts.PARCEL_PROBABILITY_DECAY;
+        parcel.reward = parcel.rewardAfterNSeconds((Date.now() - parcel.timestamp) / 1000)
+        if (parcel.probability < consts.PARCEL_THRESHOLD_REMOVAL || parcel.reward <= 0) {
+            console.log("removing parcel ", parcel);
+            beliefs.parcels.delete(id)
+            beliefs.parcelLocations[parcel.x][parcel.y] = { present: 0, id: undefined }
         }
     }
 
-    //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
-    if (beliefs.parcels.size > 0 && allyList.size > 0) {
-        let parcelsIterator = beliefs.parcels.values().filter(parcel => parcel.carriedBy !== beliefs.me.id);
-        let sensedParcels = [];
-        for (let parcel of parcelsIterator) {
-            sensedParcels.push(parcel);
-        }
-        for (let ally of allyList) {
-            await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
-        }
-    }
+    // //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
+    // if (beliefs.parcels.size > 0 && allyList.size > 0) {
+    //     let parcelsIterator = beliefs.parcels.values().filter(parcel => parcel.carriedBy !== beliefs.me.id);
+    //     let sensedParcels = [];
+    //     for (let parcel of parcelsIterator) {
+    //         sensedParcels.push(parcel);
+    //     }
+    //     for (let ally of allyList) {
+    //         await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
+    //     }
+    // }
 
     beliefs.me.parcels_on_head = counter;
 }

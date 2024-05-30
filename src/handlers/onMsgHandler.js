@@ -4,8 +4,9 @@ import { Parcel } from '../classes/parcel.js';
 import { findBestTile, findBestTileGivenPosition } from '../tools/findBestTile.js';
 import { distance } from '../tools/distance.js';
 import { Agent } from '../classes/agents.js';
+import { consts } from '../classes/consts.js';
 
-async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList, deliverooApi, secretToken, beliefSet, intentionQueue) {
+async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList, deliverooApi, secretToken, beliefSet, intentionQueue, collaborationClass) {
     console.log("received message from ", id, " with content: ", msg)
     if (allyList.size > 0 && msg.topic !== "ALLYGLS?") {
         let found = false;
@@ -46,11 +47,11 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 let myParcel = beliefSet.parcels.get(parcelId);
                 if (myParcel.timestamp < objParcel.timestamp) {
                     //non serve ricalcolare nulla, il valore è già aggiornato dall'altro sensing
-                    beliefSet.parcels.delete(parcelId);
                     beliefSet.parcels.set(parcelId, objParcel)
                 }
             } else {
                 beliefSet.parcels.set(parcelId, objParcel)
+                beliefSet.parcelLocations[parcel.x][parcel.y] = { present: 1, id: parcelId }
             }
         }
     }
@@ -80,7 +81,6 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
             let message;
             let path = astar.search(beliefSet.deliveroo_graph, beliefSet.deliveroo_graph.grid[msg.content.x][msg.content.y], beliefSet.deliveroo_graph.grid[beliefSet.me.x][beliefSet.me.y]);
             if (path.length === 0) {
-
                 console.log("no path found");
                 message = new Message("fail", secretToken, "no path was found");
             } else {
@@ -88,49 +88,56 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 let requesterReward = msg.content.reward;
                 //evaluate my reward to Delivery 
                 let bestTile = findBestTile(beliefSet.delivery_tiles);
-                let responderDistanceToDelivery = distance(beliefSet.me, { x: bestTile[0], y: bestTile[1] });
-                let responderParcels = beliefSet.parcels.values().filter(parcel => parcel.carriedBy === beliefSet.me.id);
-                let responderReward = 0;
-                for (let parcel of responderParcels) {
-                    responderReward += parcel.rewardAfterNSteps(responderDistanceToDelivery);
+                if (bestTile) {
+                    let responderDistanceToDelivery = distance(beliefSet.me, { x: bestTile[0], y: bestTile[1] });
+                    let responderParcels = beliefSet.parcels.values().filter(parcel => parcel.carriedBy === beliefSet.me.id);
+                    let responderReward = 0;
+                    for (let parcel of responderParcels) {
+                        responderReward += parcel.rewardAfterNSteps(responderDistanceToDelivery);
+                    }
+                    if (responderReward <= 0) {
+                        responderReward = 0;
+                    }
+                    let noCollaborationThreshold = requesterReward + responderReward;
+                    //now evaluate what we would gain by collaborating
+                    let middlePoint = path[Math.floor(path.length / 2) - 1];
+                    if (path.length === 1) {
+                        middlePoint = path[0];
+                    }
+                    let requesterSteps = distance({ x: middlePoint.x, y: middlePoint.y }, { x: msg.content.x, y: msg.content.y });
+                    let bestDeliveryFromMiddlePoint = findBestTileGivenPosition(beliefSet.delivery_tiles, middlePoint.x, middlePoint.y);
+                    let distanceToBestDeliveryFromMiddlePoint = distance({ x: middlePoint.x, y: middlePoint.y }, { x: bestDeliveryFromMiddlePoint[0], y: bestDeliveryFromMiddlePoint[1] });
+                    let requesterCollaborationReward = 0;
+                    let requesterTotalSteps = requesterSteps + distanceToBestDeliveryFromMiddlePoint;
+                    for (let parcel of msg.content.parcels) {
+                        let objParcel = new Parcel(parcel)
+                        requesterCollaborationReward += objParcel.rewardAfterNSteps(requesterTotalSteps);
+                    }
+                    if (requesterCollaborationReward <= 0) {
+                        requesterCollaborationReward = 0;
+                    }
+                    let responderSteps = distance({ x: middlePoint.x, y: middlePoint.y }, beliefSet.me);
+                    let responderTotalSteps = responderSteps + distanceToBestDeliveryFromMiddlePoint;
+                    let responderCollaborationReward = 0;
+                    for (let parcel of responderParcels) {
+                        responderCollaborationReward += parcel.rewardAfterNSteps(responderTotalSteps);
+                    }
+                    if (responderCollaborationReward <= 0) {
+                        responderCollaborationReward = 0;
+                    }
+                    let collaborationReward = requesterCollaborationReward + responderCollaborationReward;
+                    //add an offset to consider how risky it is to collaborate
+                    if (collaborationReward > noCollaborationThreshold) {
+                        console.log("we can collaborate!");
+                        message = new Message("Ok", secretToken, { x: middlePoint.x, y: middlePoint.y });
+                    } else {
+                        //do not collaborate
+                        console.log("we cannot collaborate!");
+                        message = new Message("nope", secretToken, "not worth to set up a collaboration!");
+                    }
                 }
-                if (responderReward <= 0) {
-                    responderReward = 0;
-                }
-                let noCollaborationThreshold = requesterReward + responderReward;
-                //now evaluate what we would gain by collaborating
-                //TODO if path length is 1 we have to change this
-                let middlePoint = path[Math.floor(path.length / 2) - 1];
-                let requesterSteps = distance({ x: middlePoint.x, y: middlePoint.y }, { x: msg.content.x, y: msg.content.y });
-                let bestDeliveryFromMiddlePoint = findBestTileGivenPosition(beliefSet.delivery_tiles, middlePoint.x, middlePoint.y);
-                let distanceToBestDeliveryFromMiddlePoint = distance({ x: middlePoint.x, y: middlePoint.y }, { x: bestDeliveryFromMiddlePoint[0], y: bestDeliveryFromMiddlePoint[1] });
-                let requesterCollaborationReward = 0;
-                let requesterTotalSteps = requesterSteps + distanceToBestDeliveryFromMiddlePoint;
-                for (let parcel of msg.content.parcels) {
-                    let objParcel = new Parcel(parcel)
-                    requesterCollaborationReward += objParcel.rewardAfterNSteps(requesterTotalSteps);
-                }
-                if (requesterCollaborationReward <= 0) {
-                    requesterCollaborationReward = 0;
-                }
-                let responderSteps = distance({ x: middlePoint.x, y: middlePoint.y }, beliefSet.me);
-                let responderTotalSteps = responderSteps + distanceToBestDeliveryFromMiddlePoint;
-                let responderCollaborationReward = 0;
-                for (let parcel of responderParcels) {
-                    responderCollaborationReward += parcel.rewardAfterNSteps(responderTotalSteps);
-                }
-                if (responderCollaborationReward <= 0) {
-                    responderCollaborationReward = 0;
-                }
-                let collaborationReward = requesterCollaborationReward + responderCollaborationReward;
-                //add an offset to consider how risky it is to collaborate
-                if (collaborationReward > noCollaborationThreshold ) {
-                    console.log("we can collaborate!");
-                    message = new Message("Ok", secretToken, { x: middlePoint.x, y: middlePoint.y });
-                } else {
-                    //do not collaborate
-                    console.log("we cannot collaborate!");
-                    message = new Message("nope", secretToken, "not worth to set up a collaboration!");
+                else {
+                    message = new Message("fail", secretToken, "no delivery tiles found");
                 }
             }
             try {
@@ -145,24 +152,32 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
     if (msg.topic === "AtomicExchange") {
         //since I sent an Ok he told me we can start, I can safely trash my intention and set up the AtomicExchange
         try {
-            console.log("AtomicExchange received, trashing last intention and setting up new plan!");
+            console.log("AtomicExchange received, trashing all intentions and setting up new plan!");
             intentionQueue.stopAll();
-            intentionQueue.push(["atomic_exchange", msg.content.x, msg.content.y]);
+            // consts.deliveryingAfterCollaboration = true;
+            intentionQueue.push(["atomic_exchange", msg.content.x, msg.content.y, false]);
         } catch (error) {
-            console.log("error in responding...");
-            await deliverooApi.say(id,Message("fail", secretToken, "error in sending AtomicExchangeACK"));
+            console.log("error in adding AtomicExchange...");
+            await deliverooApi.say(id, new Message("fail", secretToken, "error in adding AtomicExchange..."));
         }
+    }
+    if (msg.topic === "atMiddlePoint") {
+        collaborationClass.collaborationLocation = { x: msg.content.x, y: msg.content.y };
+        collaborationClass.collaboratorOnSite = true;
+    }
+    if (msg.topic === "AtomicExchangeFinished") {
+        // consts.deliveryingAfterCollaboration = false;
     }
     if (msg.topic === "fail") {
         console.log("received fail message, we have to start from scratch!");
         //per ora facciamo che partiamo da 0 a rivalutare la situazione
         intentionQueue.stopAll();
     }
-    if (msg.topic === "nope"){
+    if (msg.topic === "nope") {
         console.log("don't proceed with collaboration");
         //non serve fare nulla, è solo per vedere che succede
         //In caso si possono aggiungere logiche sopra se serve
-        
+
     }
 }
 export { onMsgHandler }

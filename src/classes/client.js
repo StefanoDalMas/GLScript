@@ -48,7 +48,7 @@ class Client {
 
         this.deliverooApi.onAgentsSensing(async (agents) => onAgentSensingHandler(agents, this.beliefSet, this.deliverooApi, this.secretToken, this.allyList))
 
-        this.deliverooApi.onMsg((id, name, msg, callbackResponse) => onMsgHandler(id, name, msg, callbackResponse, this.isMaster, this.allyList, this.deliverooApi,this.secretToken, this.beliefSet, this.intentionQueue))
+        this.deliverooApi.onMsg((id, name, msg, callbackResponse) => onMsgHandler(id, name, msg, callbackResponse, this.isMaster, this.allyList, this.deliverooApi,this.secretToken, this.beliefSet, this.intentionQueue, this.collaborationClass))
 
     }
 
