@@ -150,7 +150,6 @@ class GoTo extends Plan {
                     // throw ['stucked', 'movement fail'];
                 }
 
-                // if (this.stopped) throw ['stopped']; // if stopped then quit
 
                 if (me_x != x || me_y != y) {
                     // se sono su una consegna, consegno
@@ -289,9 +288,11 @@ class RandomMove extends Plan {
                 } else {
                     throw ['got blocked by someone, exiting random_move'];
                 }
+                if (this.stopped) throw ['stopped'];
             } else {
                 await this.subIntention(['go_to', new_tile.x, new_tile.y]);
             }
+            if (this.stopped) throw ['stopped'];
             return true;
 
         } else {
@@ -306,7 +307,7 @@ class PDDLMove extends Plan {
     }
     async execute(pddl_move, x, y) {
         if (client.beliefSet.me.x != undefined && client.beliefSet.me.y != undefined) {
-
+            if (this.stopped) throw ['stopped'];
             let status = false;
             let me_x = Math.round(client.beliefSet.me.x);
             let me_y = Math.round(client.beliefSet.me.y);
@@ -335,6 +336,7 @@ class PDDLMove extends Plan {
                     client.beliefSet.me.y = Math.round(status.y);
                     me_y = client.beliefSet.me.y;
                 }
+                if (this.stopped) throw ['stopped'];
                 //we don't have else here, we're fine
             }
 
@@ -349,6 +351,7 @@ class PDDLMove extends Plan {
 
             console.log("sending to remote solver");
             let plan = await onlineSolver(domainString, problemString);
+            if (this.stopped) throw ['stopped'];
 
             if (plan) {
                 //since we have to await for the result, we have to check again if 
@@ -374,6 +377,8 @@ class PDDLMove extends Plan {
                         }
                     }
                 }
+                if (this.stopped) throw ['stopped'];
+
                 if (this.parent instanceof GoPutDown) {
                     if (client.beliefSet.me.parcels_on_head === 0) {
                         throw ['no parcels on head, exiting'];
@@ -392,9 +397,11 @@ class PDDLMove extends Plan {
                         }
                     }
                 }
+                if (this.stopped) throw ['stopped'];
                 console.log("unpack plan");
                 status = false;
                 for (let i = 0; i < plan.length; i++) {
+                    if (this.stopped) throw ['stopped'];
                     let step = plan[i];
 
                     if (step.action == 'move_right') {
@@ -421,9 +428,7 @@ class PDDLMove extends Plan {
                         me_y = client.beliefSet.me.y;
                     } else {
                         console.log("blocked")
-                        //TODO vedere se sta cosa può esserre buona [secondo me no.. si ferma per troppo poco tempo (un ciclo dell'event loop di node)]
-                        // await new Promise(res => setImmediate(res));
-                        await sleep(1);
+                        await sleep(1000);
                         i -= 1;
                     }
 
@@ -465,6 +470,8 @@ class AtomicExchange extends Plan {
         return atomic_exchange == 'atomic_exchange';
     }
     async execute(atomic_exchange, x, y) {
+        //we never check if (this.stopped) throw ['stopped']; because we cannot preempt this plan
+
         let goToMiddlePointCounter = 0;
         while (distance(client.beliefSet.me, { x: x, y: y }) > 1 && goToMiddlePointCounter < consts.MAX_PLAN_TRIES) {
             await this.subIntention(['go_to', x, y]);
@@ -542,5 +549,6 @@ planLibrary.push(GoPutDown);
 planLibrary.push(GoTo);
 planLibrary.push(RandomMove);
 planLibrary.push(PDDLMove);
+planLibrary.push(AtomicExchange);
 
 export { planLibrary };

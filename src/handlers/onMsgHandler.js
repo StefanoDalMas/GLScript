@@ -8,14 +8,12 @@ import { Agent } from '../classes/agents.js';
 async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList, deliverooApi, secretToken, beliefSet, intentionQueue) {
     console.log("received message from ", id, " with content: ", msg)
     if (allyList.size > 0 && msg.topic !== "ALLYGLS?") {
-        //ternary oprator example
         let found = false;
         for (let ally of allyList) {
             if (ally.token === msg.token) {
                 found = true;
             }
         }
-        //allyList is a Set, we have to fix the line above
         if (!found) {
             console.log("Message from someone else!!!");
             return;
@@ -82,7 +80,7 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
             let message;
             let path = astar.search(beliefSet.deliveroo_graph, beliefSet.deliveroo_graph.grid[msg.content.x][msg.content.y], beliefSet.deliveroo_graph.grid[beliefSet.me.x][beliefSet.me.y]);
             if (path.length === 0) {
-                //TODO controllare se ho un alleato affianco, in quel caso collaborare subito!
+
                 console.log("no path found");
                 message = new Message("fail", secretToken, "no path was found");
             } else {
@@ -101,6 +99,7 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 }
                 let noCollaborationThreshold = requesterReward + responderReward;
                 //now evaluate what we would gain by collaborating
+                //TODO if path length is 1 we have to change this
                 let middlePoint = path[Math.floor(path.length / 2) - 1];
                 let requesterSteps = distance({ x: middlePoint.x, y: middlePoint.y }, { x: msg.content.x, y: msg.content.y });
                 let bestDeliveryFromMiddlePoint = findBestTileGivenPosition(beliefSet.delivery_tiles, middlePoint.x, middlePoint.y);
@@ -124,16 +123,15 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                     responderCollaborationReward = 0;
                 }
                 let collaborationReward = requesterCollaborationReward + responderCollaborationReward;
-                if (collaborationReward > noCollaborationThreshold + 2) {
+                //add an offset to consider how risky it is to collaborate
+                if (collaborationReward > noCollaborationThreshold ) {
                     console.log("we can collaborate!");
-                    message = new Message("AtomicExchange", secretToken, { x: middlePoint.x, y: middlePoint.y });
+                    message = new Message("Ok", secretToken, { x: middlePoint.x, y: middlePoint.y });
                 } else {
                     //do not collaborate
                     console.log("we cannot collaborate!");
-                    message = new Message("fail", secretToken, "not worth to set up a collaboration!");
-
+                    message = new Message("nope", secretToken, "not worth to set up a collaboration!");
                 }
-
             }
             try {
                 console.log("Sending decision!");
@@ -142,9 +140,29 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
             catch (error) {
                 console.log("error in responding...");
             }
-
         }
-
+    }
+    if (msg.topic === "AtomicExchange") {
+        //since I sent an Ok he told me we can start, I can safely trash my intention and set up the AtomicExchange
+        try {
+            console.log("AtomicExchange received, trashing last intention and setting up new plan!");
+            intentionQueue.stopAll();
+            intentionQueue.push(["atomic_exchange", msg.content.x, msg.content.y]);
+        } catch (error) {
+            console.log("error in responding...");
+            await deliverooApi.say(id,Message("fail", secretToken, "error in sending AtomicExchangeACK"));
+        }
+    }
+    if (msg.topic === "fail") {
+        console.log("received fail message, we have to start from scratch!");
+        //per ora facciamo che partiamo da 0 a rivalutare la situazione
+        intentionQueue.stopAll();
+    }
+    if (msg.topic === "nope"){
+        console.log("don't proceed with collaboration");
+        //non serve fare nulla, è solo per vedere che succede
+        //In caso si possono aggiungere logiche sopra se serve
+        
     }
 }
 export { onMsgHandler }

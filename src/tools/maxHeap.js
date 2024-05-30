@@ -98,4 +98,8 @@ export class MaxHeap {
     toArray() {
         return this.heap.slice();
     }
+
+    clear(){
+        this.heap = [];
+    }
 }

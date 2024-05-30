@@ -23,6 +23,13 @@ class IntentionRevision {
         return this.#map_graph;
     }
 
+    stopAll() {
+        //remove this.intention_queue and reset go_put_down_tries
+        consts.go_put_down_tries = 0;
+        consts.put_down_in_queue = false;
+        this.intention_queue.clear();
+    }
+
     /**
      * Start intention revision loop
      */
@@ -33,6 +40,7 @@ class IntentionRevision {
             // console.log("dimensione:", this.intention_queue.length)
             console.log("go_put_down_tries = ", consts.go_put_down_tries)
             if (this.intention_queue.length > 0) {
+
 
                 // for (var i = 0; i < this.intention_queue.length; i++) {
                 //     result += this.intention_queue[i].predicate;
@@ -109,7 +117,13 @@ class IntentionRevision {
                             }
                             let msg = new Message("SetUpCollaboration", client.secretToken, { x: client.beliefSet.me.x, y: client.beliefSet.me.y, parcels: carriedParcels, reward: expectedReward });
                             let response = await client.deliverooApi.ask(ally.id, msg);
-                            console.log("response: ", response);
+                            if (response.topic === "Ok") {
+                                let middlePoint_x = response.content.x;
+                                let middlePoint_y = response.content.y;
+                                this.stopAll();
+                                this.push(['atomic_exchange', middlePoint_x, middlePoint_y]);
+                                await client.deliverooApi.say(ally.id, new Message("AtomicExchange", client.secretToken, { x: middlePoint_x, y: middlePoint_y }));
+                            }
                         }
                     }
                 }
@@ -121,7 +135,7 @@ class IntentionRevision {
                         let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall());
                         if (neighbors.length === 0) {
                             console.log('Skipping intention because I cannot move...', intention.predicate)
-                            await sleep(1);
+                            await sleep(700);
                             continue;
                         }
                     }
@@ -160,7 +174,14 @@ class IntentionRevision {
                             }
                             let msg = new Message("SetUpCollaboration", client.secretToken, { x: client.beliefSet.me.x, y: client.beliefSet.me.y, parcels: carriedParcels, reward: 0 });
                             let response = await client.deliverooApi.ask(ally.id, msg);
-                            console.log("response: ", response);
+
+                            if (response.topic === "Ok") {
+                                let middlePoint_x = response.content.x;
+                                let middlePoint_y = response.content.y;
+                                this.stopAll();
+                                this.push(['atomic_exchange', middlePoint_x, middlePoint_y]);
+                                await client.deliverooApi.say(ally.id, new Message("AtomicExchange", client.secretToken, { x: middlePoint_x, y: middlePoint_y }));
+                            }
                         }
                     }
                     consts.go_put_down_tries += 1;
@@ -213,27 +234,7 @@ class IntentionRevisionQueue extends IntentionRevision {
 
 }
 
-class IntentionRevisionReplace extends IntentionRevision {
 
-    async push(predicate) {
-
-        // Check if already queued
-        const last = this.intention_queue.at(this.intention_queue.length - 1);
-        if (last && last.predicate.join(' ') == predicate.join(' ')) {
-            return; // intention is already being achieved
-        }
-
-        console.log('IntentionRevisionReplace.push', predicate);
-        const intention = new Intention(this, predicate);
-        this.intention_queue.push(intention);
-
-        // Force current intention stop 
-        if (last) {
-            last.stop();
-        }
-    }
-
-}
 
 class IntentionRevisionMaxHeap extends IntentionRevision {
 
@@ -255,4 +256,4 @@ class IntentionRevisionMaxHeap extends IntentionRevision {
 
 
 
-export { IntentionRevisionQueue, IntentionRevisionReplace, IntentionRevision, IntentionRevisionMaxHeap }
+export { IntentionRevisionQueue, IntentionRevision, IntentionRevisionMaxHeap }
