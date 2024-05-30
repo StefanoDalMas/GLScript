@@ -44,7 +44,7 @@ class Client {
 
         this.deliverooApi.onParcelsSensing(parcels => onParcelSensingHandler(parcels, this.beliefSet, this.intentionQueue))
 
-        this.deliverooApi.onParcelsSensing(async (perceived_parcels) => onParcelSensingHandlerAsync(perceived_parcels, this.beliefSet, this.allyList))
+        this.deliverooApi.onParcelsSensing(async (perceived_parcels) => onParcelSensingHandlerAsync(perceived_parcels, this.beliefSet, this.allyList, this.deliverooApi, this.secretToken))
 
         this.deliverooApi.onAgentsSensing(async (agents) => onAgentSensingHandler(agents, this.beliefSet))
 

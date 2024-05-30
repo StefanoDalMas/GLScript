@@ -2,6 +2,7 @@
 import { consts } from '../classes/consts.js'
 import { distance } from '../tools/distance.js'
 import { Parcel } from '../classes/parcel.js'
+import { Message } from '../classes/message.js'
 
 function onParcelSensingHandler(parcels, beliefs, intentionQueue) {
     const options = []
@@ -41,7 +42,7 @@ function onParcelSensingHandler(parcels, beliefs, intentionQueue) {
 
 }
 
-async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList) {
+async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList, deliverooApi, secretToken) {
     let counter = 0
     for (const p of perceived_parcels) {
         beliefs.parcels.set(p.id, new Parcel(p))
@@ -69,13 +70,13 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList)
 
     //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
     if (beliefs.parcels.size > 0) {
-        let parcelsIterator = beliefs.parcels.values().filter(parcel => parcel.carriedBy !== client.beliefSet.me.id);
+        let parcelsIterator = beliefs.parcels.values().filter(parcel => parcel.carriedBy !== beliefs.me.id);
         let sensedParcels = [];
         for (let parcel of parcelsIterator) {
             sensedParcels.push(parcel);
         }
         for (let ally of allyList) {
-            await deliverooApi.say(ally.id, new Message("PARACELS", secretToken, { paracels: sensedParcels }));
+            await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
         }
     }
 

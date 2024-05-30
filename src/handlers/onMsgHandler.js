@@ -36,9 +36,9 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
             allyList.add({ id: id, token: msg.token });
         }
     }
-    if (msg.topic === "PARACELS") {
-        console.log("Paracels recived")
-        externalParacels = msg.content.paracels;
+    if (msg.topic === "PARCELS") {
+        console.log("Parcels recived")
+        let externalParacels = msg.content.parcels;
         for (let parcel of externalParacels) {
             let objParcel = new Parcel(parcel)
             let parcelId = objParcel.id;
@@ -46,17 +46,11 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 // se ho già quella parcella, tengo quella più recente e se non è la mia ricalcolo il reward
                 let myParcel = beliefSet.parcels.get(parcelId);
                 if (myParcel.timestamp < objParcel.timestamp) {
+                    //non serve ricalcolare nulla, il valore è già aggiornato dall'altro sensing
                     beliefSet.parcels.delete(parcelId);
-                    let bestTile = findBestTile(beliefSet.delivery_tiles);
-                    let distanceToDelivery = distance(beliefSet.me, { x: bestTile[0], y: bestTile[1] });
-                    objParcel.reward = objParcel.rewardAfterNSteps(distanceToDelivery);
                     beliefSet.parcels.set(parcelId, objParcel)
                 }
             } else {
-                // se non cel'ho la aggiungo aggiornando il reward per me
-                let bestTile = findBestTile(beliefSet.delivery_tiles);
-                let distanceToDelivery = distance(beliefSet.me, { x: bestTile[0], y: bestTile[1] });
-                objParcel.reward = objParcel.rewardAfterNSteps(distanceToDelivery);
                 beliefSet.parcels.set(parcelId, objParcel)
             }
         }
@@ -69,7 +63,7 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
         else {
             let message;
             let path = astar.search(beliefSet.deliveroo_graph, beliefSet.deliveroo_graph.grid[msg.content.x][msg.content.y], beliefSet.deliveroo_graph.grid[beliefSet.me.x][beliefSet.me.y]);
-            if (path.lentgh === 0) {
+            if (path.length === 0) {
                 //TODO controllare se ho un alleato affianco, in quel caso collaborare subito!
                 console.log("no path found");
                 message = new Message("fail", secretToken, "no path was found");
@@ -121,11 +115,8 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 }
 
             }
-
-
-
             try {
-                console.log("something");
+                console.log("Sending decision!");
                 callbackResponse(message);
             }
             catch (error) {
