@@ -69,7 +69,7 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
     }
 
     //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
-    if (beliefs.parcels.size > 0) {
+    if (beliefs.parcels.size > 0 && allyList.size > 0) {
         let parcelsIterator = beliefs.parcels.values().filter(parcel => parcel.carriedBy !== beliefs.me.id);
         let sensedParcels = [];
         for (let parcel of parcelsIterator) {

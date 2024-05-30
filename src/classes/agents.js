@@ -5,6 +5,7 @@ class Agent {
         this.y = Math.round(agent.y);
         this.score = agent.score;
         this.probability = 1;
+        this.timestamp = Date.now();
     }
 }
 

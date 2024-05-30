@@ -3,6 +3,7 @@ import { astar } from '../tools/astar.js';
 import { Parcel } from '../classes/parcel.js';
 import { findBestTile, findBestTileGivenPosition } from '../tools/findBestTile.js';
 import { distance } from '../tools/distance.js';
+import { Agent } from '../classes/agents.js';
 
 async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList, deliverooApi, secretToken, beliefSet, intentionQueue) {
     console.log("received message from ", id, " with content: ", msg)
@@ -38,8 +39,8 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
     }
     if (msg.topic === "PARCELS") {
         console.log("Parcels recived")
-        let externalParacels = msg.content.parcels;
-        for (let parcel of externalParacels) {
+        let externalParcels = msg.content.parcels;
+        for (let parcel of externalParcels) {
             let objParcel = new Parcel(parcel)
             let parcelId = objParcel.id;
             if (beliefSet.parcels.has(parcelId)) {
@@ -52,6 +53,23 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 }
             } else {
                 beliefSet.parcels.set(parcelId, objParcel)
+            }
+        }
+    }
+    if (msg.topic === "AGENTS") {
+        console.log("Agents received");
+        let externalAgents = msg.content.agents;
+        for (let agent of externalAgents) {
+            let objAgent = new Agent(agent);
+            let agentId = objAgent.id;
+            if (beliefSet.agentsLocations.has(agentId)) {
+                let myAgent = beliefSet.agentsLocations.get(agentId);
+                if (myAgent.timestamp < objAgent.timestamp) {
+                    beliefSet.agentsLocations.delete(agentId);
+                    beliefSet.agentsLocations.set(agentId, objAgent);
+                }
+            } else {
+                beliefSet.agentsLocations.set(agentId, objAgent);
             }
         }
     }
@@ -108,7 +126,7 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 let collaborationReward = requesterCollaborationReward + responderCollaborationReward;
                 if (collaborationReward > noCollaborationThreshold + 2) {
                     console.log("we can collaborate!");
-                    message = new Message("AtomicExchange", secretToken, {x : middlePoint.x, y: middlePoint.y});
+                    message = new Message("AtomicExchange", secretToken, { x: middlePoint.x, y: middlePoint.y });
                 } else {
                     //do not collaborate
                     console.log("we cannot collaborate!");
