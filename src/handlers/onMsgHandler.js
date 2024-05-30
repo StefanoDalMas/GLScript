@@ -108,9 +108,11 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 let collaborationReward = requesterCollaborationReward + responderCollaborationReward;
                 if (collaborationReward > noCollaborationThreshold + 2) {
                     console.log("we can collaborate!");
+                    message = new Message("AtomicExchange", secretToken, {x : middlePoint.x, y: middlePoint.y});
                 } else {
                     //do not collaborate
                     console.log("we cannot collaborate!");
+                    message = new Message("fail", secretToken, "not worth to set up a collaboration!");
 
                 }
 

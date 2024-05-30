@@ -6,6 +6,7 @@ import { MaxHeap } from '../tools/maxHeap.js';
 import { distance } from '../tools/distance.js';
 import { client } from '../main.js';
 import { Message } from '../classes/message.js';
+import { sleep } from '../tools/sleep.js';
 
 
 class IntentionRevision {
@@ -112,6 +113,20 @@ class IntentionRevision {
                         }
                     }
                 }
+                if (intention.predicate[0] === 'random_move') {
+                    //avoid stalling the server if I'm stuck!
+                    if (client.beliefSet.deliveroo_graph) {
+                        let me_x = Math.round(client.beliefSet.me.x);
+                        let me_y = Math.round(client.beliefSet.me.y);
+                        let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall());
+                        if (neighbors.length === 0) {
+                            console.log('Skipping intention because I cannot move...', intention.predicate)
+                            await sleep(1);
+                            continue;
+                        }
+                    }
+
+                }
                 // Start achieving intention
                 await intention.achieve()
                     // Catch eventual error and continue
@@ -148,6 +163,7 @@ class IntentionRevision {
                             console.log("response: ", response);
                         }
                     }
+                    consts.go_put_down_tries += 1;
                 }
             } else {
                 if (consts.go_put_down_tries >= 10) {

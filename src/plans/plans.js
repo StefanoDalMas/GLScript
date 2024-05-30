@@ -92,7 +92,7 @@ class GoTo extends Plan {
         let me_x = Math.round(client.beliefSet.me.x);
         let me_y = Math.round(client.beliefSet.me.y);
         let goToTries = 0;
-        while ((me_x != x || me_y != y) && goToTries < consts.MAX_GOTO_TRIES) {
+        while ((me_x != x || me_y != y) && goToTries < consts.MAX_PLAN_TRIES) {
             if (client.beliefSet.deliveroo_graph.getNode(x, y).isWall() || client.beliefSet.deliveroo_graph.getNode(me_x, me_y).isWall()) {
                 this.log('stucked, walking to wall');
                 throw ['stucked', 'walking to wall'];
@@ -178,7 +178,7 @@ class GoTo extends Plan {
 
             if (this.stopped) throw ['stopped']; // if stopped then quit
         }
-        if (goToTries >= consts.MAX_GOTO_TRIES) {
+        if (goToTries >= consts.MAX_PLAN_TRIES) {
             throw ['maximum numbers of tries reached, exiting...'];
         }
 
@@ -230,7 +230,7 @@ class RandomMove extends Plan {
 
             if (neighbours.length === 0) {
                 this.log('stucked');
-                throw ['stucked', ' no possible moves'];
+                throw ['stucked, no possible moves'];
             }
 
             let objective_tile;
@@ -396,7 +396,7 @@ class PDDLMove extends Plan {
                 status = false;
                 for (let i = 0; i < plan.length; i++) {
                     let step = plan[i];
-                    
+
                     if (step.action == 'move_right') {
                         console.log("move right");
                         status = await client.deliverooApi.move('right');
@@ -466,11 +466,11 @@ class AtomicExchange extends Plan {
     }
     async execute(atomic_exchange, x, y) {
         let goToMiddlePointCounter = 0;
-        while (distance(client.beliefSet.me, { x: x, y: y }) > 1 && goToMiddlePointCounter < consts.MAX_GOTO_TRIES) {
+        while (distance(client.beliefSet.me, { x: x, y: y }) > 1 && goToMiddlePointCounter < consts.MAX_PLAN_TRIES) {
             await this.subIntention(['go_to', x, y]);
             goToMiddlePointCounter++;
         }
-        if (goToMiddlePointCounter >= consts.MAX_GOTO_TRIES) {
+        if (goToMiddlePointCounter >= consts.MAX_PLAN_TRIES) {
             //for each ally in the list of allies
             for (let ally of client.allyList) {
                 await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
@@ -500,7 +500,7 @@ class AtomicExchange extends Plan {
                         found = true;
                     }
                 }
-                if (found){
+                if (found) {
                     // TODO send message to perform step 2. We are now adjacent and ready to exchange
                 } else {
                     for (let ally of client.allyList) {
@@ -523,10 +523,10 @@ class AtomicExchange extends Plan {
                         found = true;
                     }
                 }
-                if(found){
+                if (found) {
                     // TODO send message to perform step 2. We are now adjacent and ready to exchange
                 } else {
-                    for(let ally of client.allyList){
+                    for (let ally of client.allyList) {
                         await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
                     }
                     throw ['collaboration failed, we cannot reach each other'];
