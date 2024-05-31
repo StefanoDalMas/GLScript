@@ -19,13 +19,13 @@ class Consts {
         this.MOVEMENT_STEPS;
         this.CLOCK;
 
-        this.MAX_WIDTH;
-        this.MAX_HEIGHT;
 
-        //avoid flooding
+        //avoid flooding using messages
         this.lastParcelExchange = Date.now();
         this.lastAgentExchange = Date.now();
+        this.lastAtomicExchangeQuestion = Date.now();
         this.MAX_DATA_EXCHANGE_INTERVAL = 1000;
+
     }
     decayingActive() {
         return this.PARCEL_DECADING_INTERVAL !== "infinite";

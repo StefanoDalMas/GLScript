@@ -99,7 +99,9 @@ class IntentionRevision {
                 if (intention.predicate[0] === 'go_put_down') {
                     //ask for Collaboration possibility
                     //IN SINGLE CORRIDOR DOES NOT GET ACCEPTED
-                    if (client.allyList.size > 0){ //&& !consts.deliveryingAfterCollaboration) {
+                    let ts = Date.now();
+                    if (client.allyList.size > 0 && ts - consts.lastAtomicExchangeQuestion > consts.MAX_DATA_EXCHANGE_INTERVAL) { //&& !consts.deliveryingAfterCollaboration) {
+                        consts.lastAtomicExchangeQuestion = ts;
                         for (let ally of client.allyList) {
                             let parcelsIterator = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
                             let carriedParcels = [];
@@ -166,7 +168,9 @@ class IntentionRevision {
                     this.push(['go_put_down', best_option[0], best_option[1]]);
                     consts.put_down_in_queue = true;
                 } else {
-                    if (client.allyList.size > 0){ //&& !consts.deliveryingAfterCollaboration) {
+                    let ts = Date.now();
+                    if (client.allyList.size > 0 && ts - consts.lastAtomicExchangeQuestion > consts.MAX_DATA_EXCHANGE_INTERVAL) { //&& !consts.deliveryingAfterCollaboration) {
+                        consts.lastAtomicExchangeQuestion = ts;
                         for (let ally of client.allyList) {
                             let parcelsIterator = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
                             let carriedParcels = [];
