@@ -470,6 +470,7 @@ class PDDLMove extends Plan {
                 return false;
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
+            return true;
 
         }
     }
@@ -537,7 +538,7 @@ class AtomicExchange extends Plan {
                     // consts.deliveryingAfterCollaboration = false;
                     await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't find the ally, exiting plan!"));
                 }
-                consts.atomic_exchange_in_queue = false;
+                // consts.atomic_exchange_in_queue = false;
                 return false;
             }
         }
@@ -553,7 +554,7 @@ class AtomicExchange extends Plan {
             }
             this.subIntention(['random_move']);
             await sleep(500);
-            consts.atomic_exchange_in_queue = false;
+            // consts.atomic_exchange_in_queue = false;
         } else {
             let direction = '';
             let me_x = Math.round(client.beliefSet.me.x);
@@ -576,14 +577,17 @@ class AtomicExchange extends Plan {
             await client.deliverooApi.pickup();
             client.beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
             let closestDelivery = findBestTile(client.beliefSet.delivery_tiles);
-            if (closestDelivery === undefined){
-                console.log("cazzo");
+            if (closestDelivery === undefined) {
+                for (let allyId of client.allyList) {
+                    await client.deliverooApi.say(allyId, new Message("fail", client.secretToken, "No delivery tiles found"));
+                }
+                return false;
             }
             await this.subIntention(['go_put_down', closestDelivery[0], closestDelivery[1]]);
             for (let allyId of client.allyList) {
                 await client.deliverooApi.say(allyId, new Message("AtomicExchangeFinished", client.secretToken, "Atomic Exchange Finished!"));
             }
-            consts.atomic_exchange_in_queue = false;
+            // consts.atomic_exchange_in_queue = false;
 
         }
         return true;
