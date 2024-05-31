@@ -2,6 +2,7 @@ class Consts {
     constructor() {
         this.put_down_in_queue = false;
         this.go_put_down_tries = 0;
+        // this.atomic_exchange_in_queue = false; non serve più penso
         
         // this.deliveryingAfterCollaboration = false;
         this.MAX_QUEUE_SIZE = 3;
@@ -24,7 +25,7 @@ class Consts {
         this.lastParcelExchange = Date.now();
         this.lastAgentExchange = Date.now();
         this.lastAtomicExchangeQuestion = Date.now();
-        this.MAX_DATA_EXCHANGE_INTERVAL = 1000;
+        this.MAX_DATA_EXCHANGE_INTERVAL = 2000;
 
     }
     decayingActive() {

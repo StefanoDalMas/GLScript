@@ -252,7 +252,7 @@ class RandomMove extends Plan {
                     let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall());
                     //if I'm in a corridor, just follow the path
                     objective_tile = path[0];
-                    if (neighbors.length >=1 && neighbors.length <= 2) {
+                    if (neighbors.length >= 1 && neighbors.length <= 2) {
                         new_tile = objective_tile;
                     }
                     else {
@@ -441,7 +441,7 @@ class PDDLMove extends Plan {
                     } else {
                         console.log("blocked")
                         await sleep(1000);
-                        i -= 1;
+                        // i -= 1;
                     }
 
                     if (me_x != x || me_y != y) {
@@ -467,7 +467,6 @@ class PDDLMove extends Plan {
                 }
             } else {
                 // qua da mettere cosa fare nel caso in cui non viene trovato un plan per andare da qualche parte (non c'è una strada perchè qualcuno in mezzo)
-                //direi che se non trova nulla, riprova a fare un random move
                 return false;
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
@@ -512,6 +511,7 @@ class AtomicExchange extends Plan {
                 // consts.deliveryingAfterCollaboration = false;
                 await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
             }
+            consts.atomic_exchange_in_queue = false;
             return false;
         }
         let ts = Date.now();
@@ -519,11 +519,15 @@ class AtomicExchange extends Plan {
         while (!allyFound) {
             for (let ally of client.allyList) {
                 let myAlly = client.beliefSet.agentsLocations.get(ally.id);
-                let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
+                let me_x = Math.round(client.beliefSet.me.x);
+                let me_y = Math.round(client.beliefSet.me.y);
+                let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]);
                 for (let neighbour of neighbors) {
-                    if (myAlly.x === neighbour.x && myAlly.y === neighbour.y) {
-                        allyFound = true;
-                        allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
+                    if (neighbour) {
+                        if (myAlly.x === neighbour.x && myAlly.y === neighbour.y) {
+                            allyFound = true;
+                            allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
+                        }
                     }
                 }
             }
@@ -533,6 +537,7 @@ class AtomicExchange extends Plan {
                     // consts.deliveryingAfterCollaboration = false;
                     await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't find the ally, exiting plan!"));
                 }
+                consts.atomic_exchange_in_queue = false;
                 return false;
             }
         }
@@ -540,12 +545,15 @@ class AtomicExchange extends Plan {
         //now they are both near to each other, we can start the exchange
         if (hasToDrop) {
             let status = await client.deliverooApi.putdown();
-            client.beliefSet.parcelLocations[client.beliefSet.me.x][client.beliefSet.me.y] = { location: 0, id: undefined };
+            let me_x = Math.round(client.beliefSet.me.x);
+            let me_y = Math.round(client.beliefSet.me.y);
+            client.beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
             if (status) {
                 client.beliefSet.me.parcels_on_head = 0;
             }
             this.subIntention(['random_move']);
             await sleep(500);
+            consts.atomic_exchange_in_queue = false;
         } else {
             let direction = '';
             let me_x = Math.round(client.beliefSet.me.x);
@@ -568,10 +576,14 @@ class AtomicExchange extends Plan {
             await client.deliverooApi.pickup();
             client.beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
             let closestDelivery = findBestTile(client.beliefSet.delivery_tiles);
+            if (closestDelivery === undefined){
+                console.log("cazzo");
+            }
             await this.subIntention(['go_put_down', closestDelivery[0], closestDelivery[1]]);
             for (let allyId of client.allyList) {
                 await client.deliverooApi.say(allyId, new Message("AtomicExchangeFinished", client.secretToken, "Atomic Exchange Finished!"));
             }
+            consts.atomic_exchange_in_queue = false;
 
         }
         return true;

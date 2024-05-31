@@ -69,7 +69,7 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
         }
     }
 
-    //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
+    // //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
     let ts = Date.now();
     //if it has been 3 seconds without communicating, communicate
     if (ts - consts.lastParcelExchange > consts.MAX_DATA_EXCHANGE_INTERVAL) {
@@ -84,9 +84,9 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
                 await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
             }
         }
-
-        beliefs.me.parcels_on_head = counter;
     }
+
+    beliefs.me.parcels_on_head = counter;
 }
 
 export { onParcelSensingHandler, onParcelSensingHandlerAsync }

@@ -64,12 +64,15 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
             let agentId = objAgent.id;
             if (beliefSet.agentsLocations.has(agentId)) {
                 let myAgent = beliefSet.agentsLocations.get(agentId);
+                beliefSet.deliveroo_graph.setWalkable(Math.round(myAgent.x), Math.round(myAgent.y));
                 if (myAgent.timestamp < objAgent.timestamp) {
                     beliefSet.agentsLocations.delete(agentId);
                     beliefSet.agentsLocations.set(agentId, objAgent);
+                    beliefSet.deliveroo_graph.setWall(Math.round(objAgent.x), Math.round(objAgent.y));
                 }
             } else {
                 beliefSet.agentsLocations.set(agentId, objAgent);
+                beliefSet.deliveroo_graph.setWall(Math.round(objAgent.x), Math.round(objAgent.y));
             }
         }
     }
@@ -156,6 +159,7 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
             console.log("AtomicExchange received, trashing all intentions and setting up new plan!");
             intentionQueue.stopAll();
             // consts.deliveryingAfterCollaboration = true;
+            // consts.atomic_exchange_in_queue = true;
             intentionQueue.push(["atomic_exchange", msg.content.x, msg.content.y, false]);
         } catch (error) {
             console.log("error in adding AtomicExchange...");

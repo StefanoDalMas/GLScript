@@ -100,7 +100,7 @@ class IntentionRevision {
                     //ask for Collaboration possibility
                     //IN SINGLE CORRIDOR DOES NOT GET ACCEPTED
                     let ts = Date.now();
-                    if (client.allyList.size > 0 && ts - consts.lastAtomicExchangeQuestion > consts.MAX_DATA_EXCHANGE_INTERVAL) { //&& !consts.deliveryingAfterCollaboration) {
+                    if (client.allyList.size > 0 && ts - consts.lastAtomicExchangeQuestion > consts.MAX_DATA_EXCHANGE_INTERVAL) {
                         consts.lastAtomicExchangeQuestion = ts;
                         for (let ally of client.allyList) {
                             let parcelsIterator = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
@@ -124,6 +124,7 @@ class IntentionRevision {
                                 let middlePoint_y = response.content.y;
                                 this.stopAll();
                                 // consts.deliveryingAfterCollaboration = true;
+                                // consts.atomic_exchange_in_queue = true;
                                 this.push(['atomic_exchange', middlePoint_x, middlePoint_y, true]);
                                 await client.deliverooApi.say(ally.id, new Message("AtomicExchange", client.secretToken, { x: middlePoint_x, y: middlePoint_y }));
                             }
@@ -169,7 +170,7 @@ class IntentionRevision {
                     consts.put_down_in_queue = true;
                 } else {
                     let ts = Date.now();
-                    if (client.allyList.size > 0 && ts - consts.lastAtomicExchangeQuestion > consts.MAX_DATA_EXCHANGE_INTERVAL) { //&& !consts.deliveryingAfterCollaboration) {
+                    if (client.allyList.size > 0 && ts - consts.lastAtomicExchangeQuestion > consts.MAX_DATA_EXCHANGE_INTERVAL) {
                         consts.lastAtomicExchangeQuestion = ts;
                         for (let ally of client.allyList) {
                             let parcelsIterator = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
@@ -185,6 +186,7 @@ class IntentionRevision {
                                 let middlePoint_y = response.content.y;
                                 this.stopAll();
                                 // consts.deliveryingAfterCollaboration = true;
+                                // consts.atomic_exchange_in_queue = true;
                                 this.push(['atomic_exchange', middlePoint_x, middlePoint_y, true]);
                                 await client.deliverooApi.say(ally.id, new Message("AtomicExchange", client.secretToken, { x: middlePoint_x, y: middlePoint_y }));
                             }

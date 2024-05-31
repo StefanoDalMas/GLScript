@@ -15,6 +15,7 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
             let old_x = Math.round(oldAgentData.x);
             let old_y = Math.round(oldAgentData.y);
             beliefs.deliveroo_graph.setWalkable(old_x, old_y);
+            beliefs.deliveroo_graph.setWalkable(Math.round(agent.x), Math.round(agent.y));
         }
         //set it to wall
         beliefs.agentsLocations.set(agent.id, new Agent(agent));

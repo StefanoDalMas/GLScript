@@ -27,9 +27,9 @@ intentions implementations:
 TODO NOW
 
 - Features : 
-    - controllare perchè le parcels non sono aggiornate correttamente
     - capire perchè fanno l'exchange solo se si vedono
-    - capire perchè l'alleato "scappa" dall'altro
+    - fixare PDDL che crasha
+    - corner case dell'angolo
 
     Strategie "anti-agent":
         - brute force agli altri agenti(?) + 1 esame
