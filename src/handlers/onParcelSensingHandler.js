@@ -58,7 +58,7 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
     let perceivedParcelsId = perceived_parcels.map((p) => p.id);
     let unseenParcelsIds = Array.from(beliefs.parcels.keys()).filter((id) => !perceivedParcelsId.includes(id));
 
-    for (let id of unseenParcelsIds){
+    for (let id of unseenParcelsIds) {
         let parcel = beliefs.parcels.get(id);
         parcel.probability -= consts.PARCEL_PROBABILITY_DECAY;
         parcel.reward = parcel.rewardAfterNSeconds((Date.now() - parcel.timestamp) / 1000)
@@ -69,19 +69,24 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
         }
     }
 
-    // //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
-    // if (beliefs.parcels.size > 0 && allyList.size > 0) {
-    //     let parcelsIterator = beliefs.parcels.values().filter(parcel => parcel.carriedBy !== beliefs.me.id);
-    //     let sensedParcels = [];
-    //     for (let parcel of parcelsIterator) {
-    //         sensedParcels.push(parcel);
-    //     }
-    //     for (let ally of allyList) {
-    //         await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
-    //     }
-    // }
+    //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
+    let ts = Date.now();
+    //if it has been 3 seconds without communicating, communicate
+    if (ts - consts.lastParcelExchange > consts.MAX_DATA_EXCHANGE_INTERVAL) {
+        if (beliefs.parcels.size > 0 && allyList.size > 0) {
+            consts.lastParcelExchange = ts;
+            let parcelsIterator = beliefs.parcels.values().filter(parcel => parcel.carriedBy !== beliefs.me.id);
+            let sensedParcels = [];
+            for (let parcel of parcelsIterator) {
+                sensedParcels.push(parcel);
+            }
+            for (let ally of allyList) {
+                await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
+            }
+        }
 
-    beliefs.me.parcels_on_head = counter;
+        beliefs.me.parcels_on_head = counter;
+    }
 }
 
 export { onParcelSensingHandler, onParcelSensingHandlerAsync }

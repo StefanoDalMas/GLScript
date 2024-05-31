@@ -48,6 +48,7 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                 if (myParcel.timestamp < objParcel.timestamp) {
                     //non serve ricalcolare nulla, il valore è già aggiornato dall'altro sensing
                     beliefSet.parcels.set(parcelId, objParcel)
+                    beliefSet.parcelLocations[parcel.x][parcel.y] = { present: 1, id: parcelId }
                 }
             } else {
                 beliefSet.parcels.set(parcelId, objParcel)
@@ -127,7 +128,7 @@ async function onMsgHandler(id, name, msg, callbackResponse, isMaster, allyList,
                     }
                     let collaborationReward = requesterCollaborationReward + responderCollaborationReward;
                     //add an offset to consider how risky it is to collaborate
-                    if (collaborationReward > noCollaborationThreshold) {
+                    if(collaborationReward > noCollaborationThreshold) {
                         console.log("we can collaborate!");
                         message = new Message("Ok", secretToken, { x: middlePoint.x, y: middlePoint.y });
                     } else {

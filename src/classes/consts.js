@@ -2,6 +2,7 @@ class Consts {
     constructor() {
         this.put_down_in_queue = false;
         this.go_put_down_tries = 0;
+        
         // this.deliveryingAfterCollaboration = false;
         this.MAX_QUEUE_SIZE = 3;
         this.MAX_PICKED_PARCELS = 3;
@@ -20,6 +21,11 @@ class Consts {
 
         this.MAX_WIDTH;
         this.MAX_HEIGHT;
+
+        //avoid flooding
+        this.lastParcelExchange = Date.now();
+        this.lastAgentExchange = Date.now();
+        this.MAX_DATA_EXCHANGE_INTERVAL = 1000;
     }
     decayingActive() {
         return this.PARCEL_DECADING_INTERVAL !== "infinite";

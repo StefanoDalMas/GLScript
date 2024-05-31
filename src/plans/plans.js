@@ -514,6 +514,7 @@ class AtomicExchange extends Plan {
             }
             return false;
         }
+        let ts = Date.now();
 
         while (!allyFound) {
             for (let ally of client.allyList) {
@@ -527,13 +528,19 @@ class AtomicExchange extends Plan {
                 }
             }
             await sleep(100);
+            if (Date.now() - ts > 3000) {
+                for (let ally of client.allyList) {
+                    // consts.deliveryingAfterCollaboration = false;
+                    await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't find the ally, exiting plan!"));
+                }
+                return false;
+            }
         }
         await sleep(300);
         //now they are both near to each other, we can start the exchange
         if (hasToDrop) {
-            let carriedParcels = client.beliefSet.parcels.values().filter(parcel => parcel.carriedBy === client.beliefSet.me.id);
             let status = await client.deliverooApi.putdown();
-            client.beliefSet.parcelLocations[client.beliefSet.me.x][client.beliefSet.me.y] = { location: 1, id: carriedParcels[0] };
+            client.beliefSet.parcelLocations[client.beliefSet.me.x][client.beliefSet.me.y] = { location: 0, id: undefined };
             if (status) {
                 client.beliefSet.me.parcels_on_head = 0;
             }

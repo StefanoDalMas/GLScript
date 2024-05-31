@@ -30,17 +30,22 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
             }
         }
     }
-    // if (beliefs.agentsLocations.size > 0 && allyList.size > 0) {
-    //     let agentsIterator = beliefs.agentsLocations.values();
-    //     let sensedAgents = [];
-    //     for (let agent of agentsIterator) {
-    //         sensedAgents.push(agent);
-    //     }
-    //     sensedAgents.push(beliefs.me);
-    //     for (let ally of allyList) {
-    //         await deliverooApi.say(ally.id, new Message("AGENTS", secretToken, { agents: sensedAgents }));
-    //     }
-    // }
+    let ts = Date.now();
+    if (ts - consts.lastAgentExchange > consts.MAX_DATA_EXCHANGE_INTERVAL) {
+        consts.lastAgentExchange = ts;
+        if (beliefs.agentsLocations.size > 0 && allyList.size > 0) {
+            let agentsIterator = beliefs.agentsLocations.values();
+            let sensedAgents = [];
+            for (let agent of agentsIterator) {
+                sensedAgents.push(agent);
+            }
+            sensedAgents.push(beliefs.me);
+            for (let ally of allyList) {
+                await deliverooApi.say(ally.id, new Message("AGENTS", secretToken, { agents: sensedAgents }));
+            }
+        }
+    }
+
 }
 
 export { onAgentSensingHandler }
