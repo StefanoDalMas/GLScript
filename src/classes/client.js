@@ -12,7 +12,6 @@ import { onParcelSensingHandler, onParcelSensingHandlerAsync } from '../handlers
 import { onYouHandler } from '../handlers/onYouHandler.js';
 import { onAgentSensingHandler } from '../handlers/onAgentSensingHandler.js';
 import { onMsgHandler } from '../handlers/onMsgHandler.js';
-import { CollaborationClass } from './collaborationClass.js';
 
 
 class Client {
@@ -24,7 +23,6 @@ class Client {
         this.intentionQueue = new IntentionRevisionMaxHeap();
         this.beliefSet = new BeliefSet();
         this.allyList = new Set();
-        this.collaborationClass = new CollaborationClass();
     }
 
     async configure() {
@@ -48,7 +46,7 @@ class Client {
 
         this.deliverooApi.onAgentsSensing(async (agents) => onAgentSensingHandler(agents, this.beliefSet, this.deliverooApi, this.secretToken, this.allyList))
 
-        this.deliverooApi.onMsg((id, name, msg, callbackResponse) => onMsgHandler(id, name, msg, callbackResponse, this.isMaster, this.allyList, this.deliverooApi,this.secretToken, this.beliefSet, this.intentionQueue, this.collaborationClass))
+        this.deliverooApi.onMsg((id, name, msg, callbackResponse) => onMsgHandler(id, name, msg, callbackResponse, this.isMaster, this.allyList, this.deliverooApi, this.secretToken, this.beliefSet, this.intentionQueue, this.collaborationClass))
 
     }
 

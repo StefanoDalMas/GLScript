@@ -3,7 +3,7 @@ class Consts {
         this.put_down_in_queue = false;
         this.go_put_down_tries = 0;
         // this.atomic_exchange_in_queue = false; non serve più penso
-        
+
         // this.deliveryingAfterCollaboration = false;
         this.MAX_QUEUE_SIZE = 3;
         this.MAX_PICKED_PARCELS = 3;
@@ -20,13 +20,13 @@ class Consts {
         this.MOVEMENT_STEPS;
         this.CLOCK;
 
-
         //avoid flooding using messages
         this.lastParcelExchange = Date.now();
         this.lastAgentExchange = Date.now();
         this.lastAtomicExchangeQuestion = Date.now();
         this.MAX_DATA_EXCHANGE_INTERVAL = 2000;
 
+        this.riskAtomicExchange = 0;
     }
     decayingActive() {
         return this.PARCEL_DECADING_INTERVAL !== "infinite";
@@ -34,4 +34,4 @@ class Consts {
 }
 
 let consts = new Consts();
-export { consts }
+export { consts };
