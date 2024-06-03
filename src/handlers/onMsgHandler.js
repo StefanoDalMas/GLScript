@@ -20,7 +20,6 @@ async function onMsgHandler(
     secretToken,
     beliefSet,
     intentionQueue,
-    collaborationClass,
 ) {
     console.log("received message from ", id, " with content: ", msg);
     if (allyList.size > 0 && msg.topic !== "ALLYGLS?") {
@@ -154,8 +153,53 @@ async function onMsgHandler(
                         requesterReward + responderReward;
                     //now evaluate what we would gain by collaborating
                     let middlePoint = path[Math.floor(path.length / 2) - 1];
-                    if (path.length === 1) {
+                    if (path.length === 1 || path.length === 2) { // === 2 just to merge the logic
                         middlePoint = path[0];
+                        let middlePointX = middlePoint.x;
+                        let middlePointY = middlePoint.y;
+                        let allyX = msg.content.x;
+                        let allyY = msg.content.y;
+                        let myX = beliefSet.me.x;
+                        let myY = beliefSet.me.y;
+                        if (myY === allyY) {
+                            if (myX < allyX) {
+                                middlePoint = beliefSet.deliveroo_graph.grid[middlePointX - 1][middlePointY];
+                            } else {
+                                middlePoint = beliefSet.deliveroo_graph.grid[middlePointX + 1][middlePointY];
+                            }
+                        }
+                        if (myX === allyX) {
+                            if (myY < allyY) {
+                                middlePoint = beliefSet.deliveroo_graph.grid[middlePointX][middlePointY - 1];
+                            } else {
+                                middlePoint = beliefSet.deliveroo_graph.grid[middlePointX][middlePointY + 1];
+                            }
+                        }
+                        else {
+                            //consider the case in which we are in a corridor L shaped
+                            if (middlePointY === allyY) {
+                                if (middlePointX < allyX) {
+                                    middlePoint = beliefSet.deliveroo_graph.grid[middlePointX - 1][middlePointY];
+                                } else {
+                                    middlePoint = beliefSet.deliveroo_graph.grid[middlePointX + 1][middlePointY];
+                                }
+                            }
+                            if (middlePointX === allyX) {
+                                if (middlePointY < allyY) {
+                                    middlePoint = beliefSet.deliveroo_graph.grid[middlePointX][middlePointY - 1];
+                                } else {
+                                    middlePoint = beliefSet.deliveroo_graph.grid[middlePointX][middlePointY + 1];
+                                }
+                            }
+                        }
+                    }
+                    if(middlePoint.weight === 0){
+                        message = new Message(
+                            "nope",
+                            secretToken,
+                            "no delivery tiles found",
+                        );
+                        callbackResponse(message);
                     }
                     let requesterSteps = distance(
                         { x: middlePoint.x, y: middlePoint.y },
@@ -166,6 +210,14 @@ async function onMsgHandler(
                         middlePoint.x,
                         middlePoint.y,
                     );
+                    if(bestDeliveryFromMiddlePoint === undefined) {
+                        message = new Message(
+                            "nope",
+                            secretToken,
+                            "no delivery tiles found",
+                        );
+                        callbackResponse(message);
+                    }
                     let distanceToBestDeliveryFromMiddlePoint = distance(
                         { x: middlePoint.x, y: middlePoint.y },
                         {
@@ -204,7 +256,7 @@ async function onMsgHandler(
                     //add an offset to consider how risky it is to collaborate
                     if (
                         collaborationReward >
-                        noCollaborationThreshold + consts.riskAtomicExchange
+                        noCollaborationThreshold + consts.riskAtomicExchange - 1
                     ) {
                         console.log("we can collaborate!");
                         message = new Message("Ok", secretToken, {

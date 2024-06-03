@@ -322,6 +322,10 @@ GridNode.prototype.isWall = function () {
     return this.weight === 0;
 };
 
+GridNode.prototype.isWalkable = function () {
+    return this.weight === 1;
+};
+
 function BinaryHeap(scoreFunction) {
     this.content = [];
     this.scoreFunction = scoreFunction;

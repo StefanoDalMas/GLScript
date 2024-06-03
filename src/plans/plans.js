@@ -441,7 +441,7 @@ class PDDLMove extends Plan {
                     } else {
                         console.log("blocked")
                         await sleep(1000);
-                        // i -= 1;
+                        i -= 1;
                     }
 
                     if (me_x != x || me_y != y) {
@@ -478,7 +478,7 @@ class PDDLMove extends Plan {
 
 
 class AtomicExchange extends Plan {
-    static isApplicableTo(atomic_exchange, x, y) {
+    static isApplicableTo(atomic_exchange, x, y, hasToDrop) {
         return atomic_exchange == 'atomic_exchange';
     }
     async execute(atomic_exchange, x, y, hasToDrop) {
@@ -512,11 +512,9 @@ class AtomicExchange extends Plan {
                 // consts.deliveryingAfterCollaboration = false;
                 await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
             }
-            consts.atomic_exchange_in_queue = false;
             return false;
         }
         let ts = Date.now();
-
         while (!allyFound) {
             for (let ally of client.allyList) {
                 let myAlly = client.beliefSet.agentsLocations.get(ally.id);
@@ -535,16 +533,15 @@ class AtomicExchange extends Plan {
             await sleep(100);
             if (Date.now() - ts > 3000) {
                 for (let ally of client.allyList) {
-                    // consts.deliveryingAfterCollaboration = false;
-                    await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't find the ally, exiting plan!"));
+                    await client.deliverooApi.say(ally.id, new Message("fail", client.secretToken, "Who is there!?"));
                 }
-                // consts.atomic_exchange_in_queue = false;
                 return false;
             }
         }
         await sleep(300);
         //now they are both near to each other, we can start the exchange
         if (hasToDrop) {
+
             let status = await client.deliverooApi.putdown();
             let me_x = Math.round(client.beliefSet.me.x);
             let me_y = Math.round(client.beliefSet.me.y);
@@ -552,7 +549,17 @@ class AtomicExchange extends Plan {
             if (status) {
                 client.beliefSet.me.parcels_on_head = 0;
             }
-            this.subIntention(['random_move']);
+            let direction = '';
+            if (allyLocation.x === me_x + 1 && allyLocation.y === me_y) {
+                direction = 'left';
+            } else if (allyLocation.x === me_x - 1 && allyLocation.y === me_y) {
+                direction = 'right';
+            } else if (allyLocation.x === me_x && allyLocation.y === me_y + 1) {
+                direction = 'down';
+            } else if (allyLocation.x === me_x && allyLocation.y === me_y - 1) {
+                direction = 'up';
+            }
+            await client.deliverooApi.move(direction);
             await sleep(500);
             // consts.atomic_exchange_in_queue = false;
         } else {
@@ -587,7 +594,6 @@ class AtomicExchange extends Plan {
             for (let allyId of client.allyList) {
                 await client.deliverooApi.say(allyId, new Message("AtomicExchangeFinished", client.secretToken, "Atomic Exchange Finished!"));
             }
-            // consts.atomic_exchange_in_queue = false;
 
         }
         return true;

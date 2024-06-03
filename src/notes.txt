@@ -47,3 +47,169 @@ astar percorso che è sequenza di posizioni
 
 
 
+
+
+//New AtomicExchange
+class AtomicExchange extends Plan {
+    static isApplicableTo(atomic_exchange, x, y, hasToDrop) {
+        return atomic_exchange == 'atomic_exchange';
+    }
+    async execute(atomic_exchange, x, y, hasToDrop) {
+        //we never check if (this.stopped) throw ['stopped']; because we cannot preempt this plan
+
+
+
+        let allyLocation;
+        let goToMiddlePointCounter = 0;
+        let arrived = false;
+        while (goToMiddlePointCounter < consts.MAX_PLAN_TRIES && (client.beliefSet.me.x != x || client.beliefSet.me.y != y) && !arrived) {
+            let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
+            if (neighbors.some(node => node.x === x && node.y === y)) {
+                arrived = true;
+            }
+            // //find if my ally is what is blocking me
+            // for (let ally of client.allyList) {
+            //     for (let neighbour of neighbors) {
+            //         let myAlly = client.beliefSet.agentsLocations.get(ally.id);
+            //         if (myAlly) {
+            //             if (neighbour.x === myAlly.x && neighbour.y === myAlly.y) {
+            //                 allyFound = true;
+            //                 allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
+            //             }
+            //         }
+            //     }
+            // }
+            let status = await this.subIntention(['go_to', x, y]);
+            goToMiddlePointCounter++;
+        }
+        if (goToMiddlePointCounter >= consts.MAX_PLAN_TRIES) {
+            //for each ally in the list of allies
+            for (let ally of client.allyList) {
+                // consts.deliveryingAfterCollaboration = false;
+                await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
+            }
+            return false;
+        }
+        if (client.beliefSet.me.x === x && client.beliefSet.me.y === y) {
+            let allyFound = false;
+            let ts = Date.now();
+            while (!allyFound) {
+                for (let ally of client.allyList) {
+                    let myAlly = client.beliefSet.agentsLocations.get(ally.id);
+                    let me_x = Math.round(client.beliefSet.me.x);
+                    let me_y = Math.round(client.beliefSet.me.y);
+                    let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]);
+                    for (let neighbour of neighbors) {
+                        if (neighbour) {
+                            if (myAlly.x === neighbour.x && myAlly.y === neighbour.y) {
+                                allyFound = true;
+                                allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
+                            }
+                        }
+                    }
+                }
+                await sleep(100);
+                if(Date.now() - ts > 3000){
+                    for (let ally of client.allyList) {
+                        await client.deliverooApi.say(ally.id, new Message("fail", client.secret, "Waited too long"));
+                    }
+                    return false;
+                }
+            }
+            await sleep(300);
+            console.log("Ally adjacent!");
+        } else { //if ((client.beliefSet.me.x !== x || client.beliefSet.me.y !== y))
+            let allyFound = false;
+            let ts = Date.now();
+            while (!allyFound) {
+                for (let ally of client.allyList) {
+                    let myAlly = client.beliefSet.agentsLocations.get(ally.id);
+                    let me_x = Math.round(client.beliefSet.me.x);
+                    let me_y = Math.round(client.beliefSet.me.y);
+                    let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]);
+                    for (let neighbour of neighbors) {
+                        if (neighbour) {
+                            if (myAlly.x === neighbour.x && myAlly.y === neighbour.y) {
+                                allyFound = true;
+                                allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
+                            }
+                        }
+                    }
+                }
+                await sleep(100);
+                if(Date.now() - ts > 3000){
+                    for (let ally of client.allyList) {
+                        await client.deliverooApi.say(ally.id, new Message("fail", client.secret, "Waited too long"));
+                    }
+                    return false;
+                }
+            }
+            await sleep(300);
+            console.log("Adjacent on site!");
+            if (false) {
+                for (let ally of client.allyList) {
+                    await client.deliverooApi.say(ally.id, new Message("fail", client.secret, "Who is there!?"));
+                }
+                return false;
+            }
+        }
+        //now they are both near to each other, we can start the exchange
+        if (hasToDrop) {
+
+            let status = await client.deliverooApi.putdown();
+            let me_x = Math.round(client.beliefSet.me.x);
+            let me_y = Math.round(client.beliefSet.me.y);
+            client.beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
+            if (status) {
+                client.beliefSet.me.parcels_on_head = 0;
+            }
+            let direction = '';
+            if (allyLocation.x === me_x + 1 && allyLocation.y === me_y) {
+                direction = 'left';
+            } else if (allyLocation.x === me_x - 1 && allyLocation.y === me_y) {
+                direction = 'right';
+            } else if (allyLocation.x === me_x && allyLocation.y === me_y + 1) {
+                direction = 'down';
+            } else if (allyLocation.x === me_x && allyLocation.y === me_y - 1) {
+                direction = 'up';
+            }
+            await client.deliverooApi.move(direction);
+            await sleep(500);
+            // consts.atomic_exchange_in_queue = false;
+        } else {
+            let direction = '';
+            let me_x = Math.round(client.beliefSet.me.x);
+            let me_y = Math.round(client.beliefSet.me.y);
+            if (allyLocation.x === me_x + 1 && allyLocation.y === me_y) {
+                direction = 'right';
+            } else if (allyLocation.x === me_x - 1 && allyLocation.y === me_y) {
+                direction = 'left';
+            } else if (allyLocation.x === me_x && allyLocation.y === me_y + 1) {
+                direction = 'up';
+            } else if (allyLocation.x === me_x && allyLocation.y === me_y - 1) {
+                direction = 'down';
+            }
+            let moved = false;
+            while (!moved) {
+                moved = await client.deliverooApi.move(direction);
+            }
+            client.beliefSet.me.x = Math.round(moved.x);
+            client.beliefSet.me.y = Math.round(moved.y);
+            await client.deliverooApi.pickup();
+            client.beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
+            let closestDelivery = findBestTile(client.beliefSet.delivery_tiles);
+            if (closestDelivery === undefined) {
+                for (let allyId of client.allyList) {
+                    await client.deliverooApi.say(allyId, new Message("fail", client.secretToken, "No delivery tiles found"));
+                }
+                return false;
+            }
+            await this.subIntention(['go_put_down', closestDelivery[0], closestDelivery[1]]);
+            for (let allyId of client.allyList) {
+                await client.deliverooApi.say(allyId, new Message("AtomicExchangeFinished", client.secretToken, "Atomic Exchange Finished!"));
+            }
+
+        }
+        return true;
+    }
+}
