@@ -450,7 +450,6 @@ class PDDLMove extends Plan {
                         goToTries += 1;
                         i -= 1;
                     }
-
                     if (me_x != x || me_y != y) {
                         // se sono su una consegna, consegno
                         if (client.beliefSet.delivery_tiles.some(tile => tile[0] === me_x && tile[1] === me_y) && client.beliefSet.me.parcels_on_head > 0) {
@@ -471,6 +470,9 @@ class PDDLMove extends Plan {
                             }
                         }
                     }
+                }
+                if (goToTries >= consts.MAX_PLAN_TRIES) {
+                    return false;
                 }
             } else {
                 // qua da mettere cosa fare nel caso in cui non viene trovato un plan per andare da qualche parte (non c'è una strada perchè qualcuno in mezzo)
