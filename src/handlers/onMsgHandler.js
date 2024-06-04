@@ -193,7 +193,7 @@ async function onMsgHandler(
                             }
                         }
                     }
-                    if(middlePoint.weight === 0){
+                    if (middlePoint.weight === 0 || middlePoint.x < 0 || middlePoint.y < 0 || middlePoint.x >= consts.MAX_WIDTH || middlePoint.y >= consts.MAX_HEIGHT) {
                         message = new Message(
                             "nope",
                             secretToken,
@@ -210,7 +210,7 @@ async function onMsgHandler(
                         middlePoint.x,
                         middlePoint.y,
                     );
-                    if(bestDeliveryFromMiddlePoint === undefined) {
+                    if (bestDeliveryFromMiddlePoint === undefined) {
                         message = new Message(
                             "nope",
                             secretToken,
@@ -256,7 +256,7 @@ async function onMsgHandler(
                     //add an offset to consider how risky it is to collaborate
                     if (
                         collaborationReward >
-                        noCollaborationThreshold + consts.riskAtomicExchange - 1
+                        noCollaborationThreshold + consts.riskAtomicExchange
                     ) {
                         console.log("we can collaborate!");
                         message = new Message("Ok", secretToken, {

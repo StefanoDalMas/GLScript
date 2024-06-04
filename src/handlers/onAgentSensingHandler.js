@@ -32,7 +32,7 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
         }
     }
     let ts = Date.now();
-    if (ts - consts.lastAgentExchange > consts.MAX_DATA_EXCHANGE_INTERVAL) {
+    if (ts - consts.lastAgentExchange > consts.MAX_ATOMIC_EXCHANGE_INTERVAL) {
         consts.lastAgentExchange = ts;
         if (beliefs.agentsLocations.size > 0 && allyList.size > 0) {
             let agentsIterator = beliefs.agentsLocations.values();

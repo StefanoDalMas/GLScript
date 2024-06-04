@@ -24,9 +24,12 @@ class Consts {
         this.lastParcelExchange = Date.now();
         this.lastAgentExchange = Date.now();
         this.lastAtomicExchangeQuestion = Date.now();
-        this.MAX_DATA_EXCHANGE_INTERVAL = 2000;
+        this.MAX_DATA_EXCHANGE_INTERVAL = 1000;
+        this.MAX_ATOMIC_EXCHANGE_INTERVAL = 3000;
 
         this.riskAtomicExchange = 0;
+        this.MAX_HEIGHT = 0;
+        this.MAX_WIDTH = 0;
     }
     decayingActive() {
         return this.PARCEL_DECADING_INTERVAL !== "infinite";

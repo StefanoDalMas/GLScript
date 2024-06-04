@@ -75,6 +75,8 @@ class GoPickUp extends Plan {
             console.log("provo a tirar su con PICK UP")
             if (this.stopped) throw ['stopped']; // if stopped then quit
             return true;
+        } else {
+            console.log("mhhhhhhh food")
         }
         return false;
     }
@@ -412,7 +414,8 @@ class PDDLMove extends Plan {
                 if (this.stopped) throw ['stopped'];
                 console.log("unpack plan");
                 status = false;
-                for (let i = 0; i < plan.length; i++) {
+                let goToTries = 0;
+                for (let i = 0; i < plan.length && goToTries < consts.MAX_PLAN_TRIES; i++) {
                     if (this.stopped) throw ['stopped'];
                     let step = plan[i];
 
@@ -434,13 +437,17 @@ class PDDLMove extends Plan {
                     }
 
                     if (status) {
+                        if (goToTries > 0) {
+                            goToTries -= 1;
+                        }
                         client.beliefSet.me.x = Math.round(status.x);
                         me_x = client.beliefSet.me.x;
                         client.beliefSet.me.y = Math.round(status.y);
                         me_y = client.beliefSet.me.y;
                     } else {
                         console.log("blocked")
-                        await sleep(1000);
+                        await sleep(500);
+                        goToTries += 1;
                         i -= 1;
                     }
 
@@ -560,7 +567,7 @@ class AtomicExchange extends Plan {
                 direction = 'up';
             }
             await client.deliverooApi.move(direction);
-            await sleep(500);
+            await sleep(1000);
             // consts.atomic_exchange_in_queue = false;
         } else {
             let direction = '';
