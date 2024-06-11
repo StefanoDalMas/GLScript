@@ -20,6 +20,7 @@ async function onMsgHandler(
     secretToken,
     beliefSet,
     intentionQueue,
+    msgCollabFlags
 ) {
     console.log("received message from ", id, " with content: ", msg);
     if (allyList.size > 0 && msg.topic !== "ALLYGLS?") {
@@ -314,6 +315,12 @@ async function onMsgHandler(
                 ),
             );
         }
+    }
+    if (msg.topic === "AllyOnSite!") {
+        msgCollabFlags.allyOnSite = true;
+    }
+    if (msg.topic === "AllyAdjSite!") {
+        msgCollabFlags.allyAdjSite = true;
     }
     if (msg.topic === "fail") {
         console.log("received fail message, we have to start from scratch!");

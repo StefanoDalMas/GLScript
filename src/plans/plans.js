@@ -493,27 +493,31 @@ class AtomicExchange extends Plan {
     async execute(atomic_exchange, x, y, hasToDrop) {
         //we never check if (this.stopped) throw ['stopped']; because we cannot preempt this plan
 
-        let goToMiddlePointCounter = 0;
-        //se ho l'alleato in mezzo dustance diventa 0 perchè non trova un percorso possibile
-        //distance(client.beliefSet.me, { x: x, y: y }) > 1
-        let allyFound = false;
         let allyLocation;
-        while (goToMiddlePointCounter < consts.MAX_PLAN_TRIES && (client.beliefSet.me.x != x || client.beliefSet.me.y != y) && !allyFound) {
+        let goToMiddlePointCounter = 0;
+        let arrivedAdj = false;
+        while (goToMiddlePointCounter < consts.MAX_PLAN_TRIES && (client.beliefSet.me.x != x || client.beliefSet.me.y != y) && !arrivedAdj) {
             let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
-            //find if my ally is what is blocking me
-            for (let ally of client.allyList) {
-                for (let neighbour of neighbors) {
-                    let myAlly = client.beliefSet.agentsLocations.get(ally.id);
-                    if (myAlly) {
-                        if (neighbour.x === myAlly.x && neighbour.y === myAlly.y) {
-                            allyFound = true;
-                            allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
-                        }
-                    }
-                }
+            if (neighbors.some(node => node.x === x && node.y === y)) {
+                arrivedAdj = true;
+                continue;
             }
-            await this.subIntention(['go_to', x, y]);
-            goToMiddlePointCounter++;
+            // //find if my ally is what is blocking me
+            // for (let ally of client.allyList) {
+            //     for (let neighbour of neighbors) {
+            //         let myAlly = client.beliefSet.agentsLocations.get(ally.id);
+            //         if (myAlly) {
+            //             if (neighbour.x === myAlly.x && neighbour.y === myAlly.y) {
+            //                 allyFound = true;
+            //                 allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
+            //             }
+            //         }
+            //     }
+            // }
+            let status = await this.subIntention(['go_to', x, y]);
+            if (!status) {
+                goToMiddlePointCounter++;
+            }
         }
         if (goToMiddlePointCounter >= consts.MAX_PLAN_TRIES) {
             //for each ally in the list of allies
@@ -523,8 +527,37 @@ class AtomicExchange extends Plan {
             }
             return false;
         }
-        let ts = Date.now();
-        while (!allyFound) {
+        if (client.beliefSet.me.x === x && client.beliefSet.me.y === y) {
+            // I'm the first to arrive
+            for (let ally of client.allyList) {
+                await client.deliverooApi.say(ally.id, new Message("AllyOnSite!", client.secretToken, "I'm on site!"));
+            }
+            let k = 2000
+            while (!client.msgCollabFlags.allyAdjSite && k > 0) {
+                k -= 1;
+                console.log("WAITING COLLAB");
+                if (this.stopped) throw ['stopped']; // if stopped then quit
+                await new Promise(resolve => setImmediate(resolve));
+            }
+            // logica per non aspettare troppo tempo il compagno (da rivedere e togliere allyFound)
+            // let ts = Date.now();
+            // while (!allyFound) {
+            //     for (let ally of client.allyList) {
+            //         let myAlly = client.beliefSet.agentsLocations.get(ally.id);
+            //         let me_x = Math.round(client.beliefSet.me.x);
+            //         let me_y = Math.round(client.beliefSet.me.y);
+            //         let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]);
+            //         for (let neighbour of neighbors) {
+            //             if (neighbour) {
+            //                 if (myAlly.x === neighbour.x && myAlly.y === neighbour.y) {
+            //                     allyFound = true;
+            //                     allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
+            console.log("I'm FIRST and now we both ready!");
             for (let ally of client.allyList) {
                 let myAlly = client.beliefSet.agentsLocations.get(ally.id);
                 let me_x = Math.round(client.beliefSet.me.x);
@@ -533,20 +566,28 @@ class AtomicExchange extends Plan {
                 for (let neighbour of neighbors) {
                     if (neighbour) {
                         if (myAlly.x === neighbour.x && myAlly.y === neighbour.y) {
-                            allyFound = true;
                             allyLocation = { x: Math.round(myAlly.x), y: Math.round(myAlly.y) };
                         }
                     }
                 }
             }
-            await sleep(100);
-            if (Date.now() - ts > 3000) {
+        } else { //if ((client.beliefSet.me.x !== x || client.beliefSet.me.y !== y))
+            if (client.msgCollabFlags.allyOnSite) {
+                // I'm the second one to arrive
                 for (let ally of client.allyList) {
-                    await client.deliverooApi.say(ally.id, new Message("fail", client.secretToken, "Who is there!?"));
+                    await client.deliverooApi.say(ally.id, new Message("AllyAdjSite!", client.secretToken, "I'm adjacent site!"));
+                }
+                console.log("I'm SECOND and now we both ready");
+                allyLocation = { x: x, y: y };
+            } else {
+                // there is someone between each other
+                for (let ally of client.allyList) {
+                    await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
                 }
                 return false;
             }
         }
+        //now they are both near to each other, we can start the exchange
         await sleep(300);
         //now they are both near to each other, we can start the exchange
         if (hasToDrop) {
