@@ -282,7 +282,7 @@ class RandomMove extends Plan {
                 new_tile = neighbours[Math.floor(Math.random() * neighbours.length)]
             }
             if (this.stopped) throw ['stopped']; // if stopped then quit
-            if (client.deliverooApi.usingPddl) {
+            if (client.usingPddl) {
                 //since planner is too slow, it is better do directly move to the tile here
                 let status = false;
                 if (new_tile.x == me_x + 1 && new_tile.y == me_y && !client.beliefSet.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
