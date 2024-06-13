@@ -42,7 +42,7 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
             }
             sensedAgents.push(beliefs.me);
             for (let ally of allyList) {
-                await deliverooApi.say(ally.id, new Message("AGENTS", secretToken, { agents: sensedAgents }));
+                // await deliverooApi.say(ally.id, new Message("AGENTS", secretToken, { agents: sensedAgents }));
             }
         }
     }

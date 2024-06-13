@@ -512,7 +512,11 @@ class AtomicExchange extends Plan {
                     }
                 }
             }
-            await this.subIntention(['go_to', x, y]);
+            if (client.usingPddl) {
+                await this.subIntention(['pddl_move', x, y]);
+            } else {
+                await this.subIntention(['go_to', x, y]);
+            }
             goToMiddlePointCounter++;
         }
         if (goToMiddlePointCounter >= consts.MAX_PLAN_TRIES) {
