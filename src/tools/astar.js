@@ -319,11 +319,11 @@ GridNode.prototype.getCost = function (fromNeighbor) {
 };
 
 GridNode.prototype.isWall = function () {
-    return this.weight === 0;
+    return  this.weight === undefined || this.weight === 0;
 };
 
 GridNode.prototype.isWalkable = function () {
-    return this.weight === 1;
+    return this.weight != undefined && this.weight === 1;
 };
 
 function BinaryHeap(scoreFunction) {
