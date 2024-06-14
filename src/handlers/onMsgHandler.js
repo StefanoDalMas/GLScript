@@ -21,6 +21,7 @@ async function onMsgHandler(
     beliefSet,
     intentionQueue,
 ) {
+    // handshake to bind with ally
     console.log("received message from ", id, " with content: ", msg);
     if (allyList.size > 0 && msg.topic !== "ALLYGLS?") {
         let found = false;
@@ -56,7 +57,8 @@ async function onMsgHandler(
             allyList.add({ id: id, token: msg.token });
         }
     }
-    if (msg.topic === "PARCELS") {
+    // update my belief set wiht parcels from ally
+    if (msg.topic === "PARCELS ") {
         console.log("Parcels recived");
         let externalParcels = msg.content.parcels;
         for (let parcel of externalParcels) {
@@ -82,7 +84,8 @@ async function onMsgHandler(
             }
         }
     }
-    if (msg.topic === "AGENTS") {
+    // update my belief set wiht agents from ally
+    if (msg.topic === "AGENTS ") {
         console.log("Agents received");
         let externalAgents = msg.content.agents;
         for (let agent of externalAgents) {
@@ -111,12 +114,14 @@ async function onMsgHandler(
             }
         }
     }
+    // upon reception, I choose if collaborating is good or not
     if (msg.topic === "SetUpCollaboration") {
         if (callbackResponse === undefined) {
             console.log("no callbackResponse");
             return;
         } else {
             let message;
+            // check for path between me and ally
             let path = astar.search(
                 beliefSet.deliveroo_graph,
                 beliefSet.deliveroo_graph.grid[msg.content.x][msg.content.y],
@@ -126,9 +131,9 @@ async function onMsgHandler(
                 console.log("no path found");
                 message = new Message("fail", secretToken, "no path was found");
             } else {
-                //evaluate the value to surpass in order to collaborate
+                // evaluate the value to surpass in order to collaborate
                 let requesterReward = msg.content.reward;
-                //evaluate my reward to Delivery
+                // evaluate my reward to Delivery
                 let bestTile = findBestTile(beliefSet.delivery_tiles);
                 if (bestTile) {
                     let responderDistanceToDelivery = distance(beliefSet.me, {
@@ -151,9 +156,10 @@ async function onMsgHandler(
                     }
                     let noCollaborationThreshold =
                         requesterReward + responderReward;
-                    //now evaluate what we would gain by collaborating
+                    // now evaluate what we would gain by collaborating
                     let middlePoint = path[Math.floor(path.length / 2) - 1];
-                    if (path.length === 1 || path.length === 2) { // === 2 just to merge the logic
+                    // middle point re-computation if we are in corner
+                    if (path.length === 1 || path.length === 2) {
                         middlePoint = path[0];
                         let middlePointX = middlePoint.x;
                         let middlePointY = middlePoint.y;
@@ -193,6 +199,7 @@ async function onMsgHandler(
                             }
                         }
                     }
+                    // if middle point not valid
                     if (middlePoint === undefined || middlePoint.weight === 0 || middlePoint.x < 0 || middlePoint.y < 0 || middlePoint.x >= consts.MAX_WIDTH || middlePoint.y >= consts.MAX_HEIGHT) {
                         message = new Message(
                             "nope",
@@ -200,7 +207,9 @@ async function onMsgHandler(
                             "no delivery tiles found",
                         );
                         callbackResponse(message);
+                        return false;
                     }
+                    // distance between ally and middle point
                     let requesterSteps = distance(
                         { x: middlePoint.x, y: middlePoint.y },
                         { x: msg.content.x, y: msg.content.y },
@@ -219,6 +228,7 @@ async function onMsgHandler(
                         callbackResponse(message);
                         return false;
                     }
+                    // distance between delivery and middle point
                     let distanceToBestDeliveryFromMiddlePoint = distance(
                         { x: middlePoint.x, y: middlePoint.y },
                         {
@@ -226,6 +236,7 @@ async function onMsgHandler(
                             y: bestDeliveryFromMiddlePoint[1],
                         },
                     );
+                    // compute partial hypotetical reward by ally
                     let requesterCollaborationReward = 0;
                     let requesterTotalSteps =
                         requesterSteps + distanceToBestDeliveryFromMiddlePoint;
@@ -237,10 +248,12 @@ async function onMsgHandler(
                     if (requesterCollaborationReward <= 0) {
                         requesterCollaborationReward = 0;
                     }
+                    // distance between me and middle point
                     let responderSteps = distance(
                         { x: middlePoint.x, y: middlePoint.y },
                         beliefSet.me,
                     );
+                    // compute partial hypotetical reward by me
                     let responderTotalSteps =
                         responderSteps + distanceToBestDeliveryFromMiddlePoint;
                     let responderCollaborationReward = 0;
@@ -251,10 +264,11 @@ async function onMsgHandler(
                     if (responderCollaborationReward <= 0) {
                         responderCollaborationReward = 0;
                     }
+                    // compute final hypotetical reward by coppaborating
                     let collaborationReward =
                         requesterCollaborationReward +
                         responderCollaborationReward;
-                    //add an offset to consider how risky it is to collaborate
+                    // add an offset to consider how risky it is to collaborate
                     if (
                         collaborationReward >
                         noCollaborationThreshold + consts.riskAtomicExchange
@@ -281,6 +295,7 @@ async function onMsgHandler(
                     );
                 }
             }
+            // send decision to ally
             try {
                 console.log("Sending decision!");
                 callbackResponse(message);
@@ -289,15 +304,13 @@ async function onMsgHandler(
             }
         }
     }
+    // since I sent an Ok he told me we can start, I can safely trash my intention and set up the AtomicExchange
     if (msg.topic === "AtomicExchange") {
-        //since I sent an Ok he told me we can start, I can safely trash my intention and set up the AtomicExchange
         try {
             console.log(
                 "AtomicExchange received, trashing all intentions and setting up new plan!",
             );
             intentionQueue.stopAll();
-            // consts.deliveryingAfterCollaboration = true;
-            // consts.atomic_exchange_in_queue = true;
             intentionQueue.push([
                 "atomic_exchange",
                 msg.content.x,
@@ -318,13 +331,10 @@ async function onMsgHandler(
     }
     if (msg.topic === "fail") {
         console.log("received fail message, we have to start from scratch!");
-        //per ora facciamo che partiamo da 0 a rivalutare la situazione
         intentionQueue.stopAll();
     }
     if (msg.topic === "nope") {
         console.log("don't proceed with collaboration");
-        //non serve fare nulla, è solo per vedere che succede
-        //In caso si possono aggiungere logiche sopra se serve
     }
 }
 export { onMsgHandler };

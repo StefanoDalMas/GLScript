@@ -320,7 +320,6 @@ class PDDLMove extends Plan {
             let status = false;
             let me_x = Math.round(client.beliefSet.me.x);
             let me_y = Math.round(client.beliefSet.me.y);
-            // let neighbours = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[me_x][me_y]).filter(node => !node.isWall())
             let neighbours = findNeighbors().filter(node => !node.isWall())
 
             // if im adjecent to a delivery tile, go deliver before calling planner
@@ -466,18 +465,15 @@ class AtomicExchange extends Plan {
         return atomic_exchange == 'atomic_exchange';
     }
     async execute(atomic_exchange, x, y, hasToDrop) {
-        //we never check if (this.stopped) throw ['stopped']; because we cannot preempt this plan
 
         let goToMiddlePointCounter = 0;
-        //se ho l'alleato in mezzo dustance diventa 0 perchè non trova un percorso possibile
-        //distance(client.beliefSet.me, { x: x, y: y }) > 1
         let allyFound = false;
         let allyLocation;
+        // go-to middle point until I arrived or I have found my ally
         while (goToMiddlePointCounter < consts.MAX_PLAN_TRIES && (client.beliefSet.me.x != x || client.beliefSet.me.y != y) && !allyFound) {
-            //let neighbors = client.beliefSet.deliveroo_graph.neighbors(client.beliefSet.deliveroo_graph.grid[client.beliefSet.me.x][client.beliefSet.me.y]);
             let neighbors = findNeighbors();
 
-            //find if my ally is what is blocking me
+            // find if my ally is what is blocking me
             for (let ally of client.allyList) {
                 for (let neighbour of neighbors) {
                     let myAlly = client.beliefSet.agentsLocations.get(ally.id);
@@ -496,14 +492,14 @@ class AtomicExchange extends Plan {
             }
             goToMiddlePointCounter++;
         }
+        // check tries counter
         if (goToMiddlePointCounter >= consts.MAX_PLAN_TRIES) {
-            //for each ally in the list of allies
             for (let ally of client.allyList) {
-                // consts.deliveryingAfterCollaboration = false;
                 await client.deliverooApi.say(ally, new Message("fail", client.secretToken, "Can't reach the middle point, exiting plan!"));
             }
             return false;
         }
+        // if my ally doen't come in x seconds, quit
         let ts = Date.now();
         while (!allyFound) {
             for (let ally of client.allyList) {
@@ -528,9 +524,10 @@ class AtomicExchange extends Plan {
             }
         }
         await sleep(300);
-        //now they are both near to each other, we can start the exchange
+        // now they are both near to each other, we can start the exchange
+        // If I'm the agent that has to drop
         if (hasToDrop) {
-
+            // drop parcels
             let status = await client.deliverooApi.putdown();
             let me_x = Math.round(client.beliefSet.me.x);
             let me_y = Math.round(client.beliefSet.me.y);
@@ -539,23 +536,26 @@ class AtomicExchange extends Plan {
                 client.beliefSet.me.parcels_on_head = 0;
             }
             status = false;
+            // move away from ally
             status = await moveWRTAllay(allyLocation, me_x, me_y, "opposite");
             if (status) {
                 updatePosition(status);
             }
             await sleep(1000);
-            // consts.atomic_exchange_in_queue = false;
         } else {
+            // if I have to pickup
             let me_x = Math.round(client.beliefSet.me.x);
             let me_y = Math.round(client.beliefSet.me.y);
             let moved = false;
             while (!moved) {
-                //moved = await client.deliverooApi.move(direction);
+                // try to move towards ally until he moves out
                 moved = await moveWRTAllay(allyLocation, me_x, me_y, "towards");
             }
             updatePosition(moved);
+            // pickup
             await client.deliverooApi.pickup();
             client.beliefSet.parcelLocations[me_x][me_y] = { location: 0, id: undefined };
+            // find best delivery tile
             let closestDelivery = findBestTile(client.beliefSet.delivery_tiles);
             if (closestDelivery === undefined) {
                 for (let allyId of client.allyList) {
@@ -563,6 +563,7 @@ class AtomicExchange extends Plan {
                 }
                 return false;
             }
+            // call putdown subintention
             await this.subIntention(['go_put_down', closestDelivery[0], closestDelivery[1]]);
             for (let allyId of client.allyList) {
                 await client.deliverooApi.say(allyId, new Message("AtomicExchangeFinished", client.secretToken, "Atomic Exchange Finished!"));

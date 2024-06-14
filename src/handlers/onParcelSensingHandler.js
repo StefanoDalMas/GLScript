@@ -10,9 +10,7 @@ function onParcelSensingHandler(parcels, beliefs, intentionQueue) {
         if (!parcel.carriedBy)
             options.push(['go_pick_up', new Parcel(parcel)]);
 
-    /**
-     * Options filtering (belief filtering)
-     */
+    // option filtering
     let best_option;
     let reward = Number.NEGATIVE_INFINITY;
     for (const option of options) {
@@ -31,11 +29,8 @@ function onParcelSensingHandler(parcels, beliefs, intentionQueue) {
         }
     }
 
-    /**
-     * Best option is selected
-     */
+    // select best option
     if (best_option && intentionQueue.length() < consts.MAX_QUEUE_SIZE) {
-        // console.log("best option: ", best_option)
         let parcel = best_option[1];
         intentionQueue.push(parcel.intoPredicate(best_option[0]))
     }
@@ -44,12 +39,14 @@ function onParcelSensingHandler(parcels, beliefs, intentionQueue) {
 
 async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList, deliverooApi, secretToken) {
     let counter = 0
+    // update my belief set with parcels
     for (const p of perceived_parcels) {
         beliefs.parcels.set(p.id, new Parcel(p))
         if (!p.carriedBy && p.reward > 0) {
             beliefs.parcelLocations[p.x][p.y] = { present: 1, id: p.id }
         }
         else {
+            // count how many parcels on my head
             if (p.carriedBy === beliefs.me.id) {
                 counter += 1;
             }
@@ -58,6 +55,7 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
     let perceivedParcelsId = perceived_parcels.map((p) => p.id);
     let unseenParcelsIds = Array.from(beliefs.parcels.keys()).filter((id) => !perceivedParcelsId.includes(id));
 
+    // for every parcel that I do not see, I have to reduce its probability of being there
     for (let id of unseenParcelsIds) {
         let parcel = beliefs.parcels.get(id);
         parcel.probability -= consts.PARCEL_PROBABILITY_DECAY;
@@ -69,9 +67,8 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
         }
     }
 
-    // //se ho il set non vuoto, comunico a ogni alleato le mie parcelle
+    // send sensed parcels to ally
     let ts = Date.now();
-    //if it has been 3 seconds without communicating, communicate
     if (ts - consts.lastParcelExchange > consts.MAX_DATA_EXCHANGE_INTERVAL) {
         if (beliefs.parcels.size > 0 && allyList.size > 0) {
             consts.lastParcelExchange = ts;
@@ -81,7 +78,7 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
                 sensedParcels.push(parcel);
             }
             for (let ally of allyList) {
-                //await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
+                await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
             }
         }
     }

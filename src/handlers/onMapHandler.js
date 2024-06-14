@@ -5,6 +5,7 @@ async function onMapHandler(width, height, tiles, beliefs) {
     let MAX_WIDTH = width - 1;
     let MAX_HEIGHT = height - 1;
 
+    // initialize map with 0s
     let deliveroo_map = [];
     for (let i = 0; i < width; i++) {
         deliveroo_map[i] = [];
@@ -15,6 +16,7 @@ async function onMapHandler(width, height, tiles, beliefs) {
         }
     }
 
+    // create tile sets (delivery_tiles, spawning_tiles)
     tiles.forEach(tile => {
         deliveroo_map[tile.x][tile.y] = 1;
         if (tile.delivery) {
@@ -25,6 +27,7 @@ async function onMapHandler(width, height, tiles, beliefs) {
         }
     });
 
+    // set all_spawning flag
     if (beliefs.spawning_tiles.length === tiles.length - beliefs.delivery_tiles.length) {
         beliefs.all_spawning = true;
     }

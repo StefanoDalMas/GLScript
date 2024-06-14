@@ -9,7 +9,7 @@
     "start": "node src/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Marco",
+  "author": "Stefano D.M., Lorenzo D.",
   "license": "ISC",
   "devDependencies": {
     "dotenv": "^16.0.3"

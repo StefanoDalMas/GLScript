@@ -10,8 +10,6 @@ class BeliefSet {
         this.spawning_tiles = [];
         this.all_spawning = false;
 
-
-        //might be needed for map stuff
         this.deliveroo_map;
         this.deliveroo_graph;
     }

@@ -1,5 +1,6 @@
 import { client } from '../main.js';
 
+// translate planner move
 export async function executePlannerMove(step){
     let status = false;
     if (step.action == 'move_right') {
@@ -18,6 +19,7 @@ export async function executePlannerMove(step){
     return status;
 }
 
+// execute movement to next tile
 export async function moveToNextTile(next_tile, me_x, me_y) {
     let status = false;
     if (next_tile.x == me_x + 1 && next_tile.y == me_y && !client.beliefSet.deliveroo_graph.getNode(me_x + 1, me_y).isWall()) {
@@ -33,6 +35,7 @@ export async function moveToNextTile(next_tile, me_x, me_y) {
     return status;
 }
 
+// execute movement away of towards ally
 export async function moveWRTAllay(allyLocation, me_x, me_y, direction) {
     let status = false;
     if (direction === "opposite") {

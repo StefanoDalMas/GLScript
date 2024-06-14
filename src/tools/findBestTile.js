@@ -2,7 +2,7 @@
 import { distance } from "./distance.js";
 import { client } from "../main.js";
 
-
+// find closest tile among a list of tiles
 function findBestTile(tiles_to_check) {
     let best_option = undefined;
     let nearest = Number.MAX_VALUE;
@@ -12,7 +12,6 @@ function findBestTile(tiles_to_check) {
         }
         let [x, y] = option;
         let current_d = distance({ x, y }, client.beliefSet.me)
-        // console.log("option is: ", option, " and distance is: ", current_d)))
         if (current_d > 0 && current_d < nearest) {
             best_option = option
             nearest = current_d
@@ -21,6 +20,7 @@ function findBestTile(tiles_to_check) {
     return best_option;
 }
 
+// as above with custom position
 function findBestTileGivenPosition(tiles_to_check, custom_x, custom_y) {
     let best_option = undefined;
     let nearest = Number.MAX_VALUE;
@@ -30,7 +30,6 @@ function findBestTileGivenPosition(tiles_to_check, custom_x, custom_y) {
         }
         let [x, y] = option;
         let current_d = distance({ x, y }, { x: custom_x, y: custom_y })
-        // console.log("option is: ", option, " and distance is: ", current_d))
         if (current_d > 0 && current_d < nearest) {
             best_option = option
             nearest = current_d

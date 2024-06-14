@@ -27,7 +27,7 @@ class Client {
 
     async configure() {
         await this.setUpCallbacks();
-        await this.commTest();
+        await this.initiateHandshake();
 
         this.intentionQueue.loop();
 
@@ -50,11 +50,10 @@ class Client {
 
     }
 
-    async commTest() {
+    async initiateHandshake() {
         if (this.isMaster) {
             await this.deliverooApi.shout(new Message("ALLYGLS?"))
         }
-        // await this.deliverooApi.ask('0a8dd3ae6f5', new Message(this.beliefSet.me.id, "superSecretToken!",'0a8dd3ae6f5', 'test', 'Hello from GIELLESSE!'))
     }
 }
 

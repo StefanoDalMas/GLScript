@@ -9,7 +9,7 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
         beliefs.agentsLocations.set(beliefs.me.id, beliefs.me);
     }
     agents.forEach(agent => {
-        //If I already know the agent, I have to update its position
+        // If I already know the agent, I have to update its position
         if (beliefs.agentsLocations.has(agent.id)) {
             let oldAgentData = beliefs.agentsLocations.get(agent.id);
             let old_x = Math.round(oldAgentData.x);
@@ -17,11 +17,11 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
             beliefs.deliveroo_graph.setWalkable(old_x, old_y);
             beliefs.deliveroo_graph.setWalkable(Math.round(agent.x), Math.round(agent.y));
         }
-        //set it to wall
+        // set it to wall
         beliefs.agentsLocations.set(agent.id, new Agent(agent));
         beliefs.deliveroo_graph.setWall(Math.round(agent.x), Math.round(agent.y));
     });
-    //for every agent that I do not see, I have to reduce its probability of being there
+    // for every agent that I do not see, I have to reduce its probability of being there
     for (let agent of beliefs.agentsLocations.values()) {
         if (!agents.find((a) => a.id === agent.id)) {
             agent.probability -= consts.AGENT_PROBABILITY_DECAY;
@@ -31,6 +31,7 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
             }
         }
     }
+    // send sensed agents to ally
     let ts = Date.now();
     if (ts - consts.lastAgentExchange > consts.MAX_ATOMIC_EXCHANGE_INTERVAL) {
         consts.lastAgentExchange = ts;
@@ -42,7 +43,7 @@ async function onAgentSensingHandler(agents, beliefs, deliverooApi, secretToken,
             }
             sensedAgents.push(beliefs.me);
             for (let ally of allyList) {
-                // await deliverooApi.say(ally.id, new Message("AGENTS", secretToken, { agents: sensedAgents }));
+                await deliverooApi.say(ally.id, new Message("AGENTS", secretToken, { agents: sensedAgents }));
             }
         }
     }
