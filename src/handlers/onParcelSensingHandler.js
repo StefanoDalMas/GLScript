@@ -81,7 +81,7 @@ async function onParcelSensingHandlerAsync(perceived_parcels, beliefs, allyList,
                 sensedParcels.push(parcel);
             }
             for (let ally of allyList) {
-                await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
+                //await deliverooApi.say(ally.id, new Message("PARCELS", secretToken, { parcels: sensedParcels }));
             }
         }
     }

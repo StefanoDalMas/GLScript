@@ -193,7 +193,7 @@ async function onMsgHandler(
                             }
                         }
                     }
-                    if (middlePoint.weight === 0 || middlePoint.x < 0 || middlePoint.y < 0 || middlePoint.x >= consts.MAX_WIDTH || middlePoint.y >= consts.MAX_HEIGHT) {
+                    if (middlePoint === undefined || middlePoint.weight === 0 || middlePoint.x < 0 || middlePoint.y < 0 || middlePoint.x >= consts.MAX_WIDTH || middlePoint.y >= consts.MAX_HEIGHT) {
                         message = new Message(
                             "nope",
                             secretToken,
@@ -217,6 +217,7 @@ async function onMsgHandler(
                             "no delivery tiles found",
                         );
                         callbackResponse(message);
+                        return false;
                     }
                     let distanceToBestDeliveryFromMiddlePoint = distance(
                         { x: middlePoint.x, y: middlePoint.y },
